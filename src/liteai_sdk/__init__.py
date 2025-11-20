@@ -1,8 +1,9 @@
 from typing import cast
 from litellm import completion, acompletion
+from litellm.utils import get_valid_models
 from litellm.types.utils import LlmProviders, ModelResponse as LiteLlmModelResponse,\
                                 Choices as LiteLlmModelResponseChoices
-from .types import ChatMessage, GenerateTextRequest, ModelResponse
+from .types import ChatMessage, LlmRequestParams, ModelResponse
 from .tool import ToolFn, RawToolDefinition, prepare_tools
 
 class LLM:
@@ -14,7 +15,7 @@ class LLM:
         self.base_url = base_url
         self.api_key = api_key
     
-    def _generate_text_params(self, params: GenerateTextRequest):
+    def _parse_params_nonstream(self, params: LlmRequestParams):
         tools = params.tools and prepare_tools(params.tools)
         return {
             "model": f"{self.provider.value}/{params.model}",
@@ -26,22 +27,54 @@ class LLM:
             "extra_headers": params.headers,
             **(params.extra_args or {})
         }
+    
+    def _parse_params_stream(self, params: LlmRequestParams):
+        tools = params.tools and prepare_tools(params.tools)
+        return {
+            "model": f"{self.provider.value}/{params.model}",
+            "messages": params.messages,
+            "base_url": self.base_url,
+            "api_key": self.api_key,
+            "tools": tools,
+            "stream": True,
+            "extra_headers": params.headers,
+            **(params.extra_args or {})
+        }
+    
+    def list_models(self) -> list[str]:
+        return get_valid_models(
+            custom_llm_provider=self.provider.value,
+            check_provider_endpoint=True,
+            api_base=self.base_url,
+            api_key=self.api_key)
 
-    def generate_text_sync(self, params: GenerateTextRequest) -> ModelResponse:
-        response = completion(**self._generate_text_params(params))
+    def generate_text_sync(self, params: LlmRequestParams) -> ModelResponse:
+        response = completion(**self._parse_params_nonstream(params))
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         return choices[0].message
 
-    async def generate_text(self, params: GenerateTextRequest) -> ModelResponse:
-        response = await acompletion(**self._generate_text_params(params))
+    async def generate_text(self, params: LlmRequestParams) -> ModelResponse:
+        response = await acompletion(**self._parse_params_nonstream(params))
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         return choices[0].message
+    
+    def stream_text_sync(self, params: LlmRequestParams):
+        response = completion(**self._parse_params_stream(params))
+        # response = cast(LiteLlmModelResponse, response)
+        # choices = cast(list[LiteLlmModelResponseChoices], response.choices)
+        # return choices[0].message
+
+    async def stream_text(self, params: LlmRequestParams):
+        response = await acompletion(**self._parse_params_stream(params))
+        # response = cast(LiteLlmModelResponse, response)
+        # choices = cast(list[LiteLlmModelResponseChoices], response.choices)
+        # return choices[0].message
 
 __all__ = [
     "LLM",
-    "GenerateTextRequest",
+    "LlmRequestParams",
     "ToolFn",
     "RawToolDefinition",
     "ChatMessage",

@@ -8,7 +8,7 @@ ChatMessage = AllMessageValues
 ModelResponse = Message
 
 @dataclass
-class GenerateTextRequest:
+class LlmRequestParams:
     model: str
     messages: list[ChatMessage]
     tools: list[ToolFn | RawToolDefinition] | None = None
