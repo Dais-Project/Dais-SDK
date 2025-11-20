@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams
+from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
 
 load_dotenv()
 
@@ -13,9 +13,10 @@ async def main():
     stream = llm.stream_text(
         LlmRequestParams(
             model="deepseek-v3.1",
-            messages=[{"role": "user", "content": "Hello World"}]))
+            messages=[UserMessage("Hello world")]))
     async for chunk in stream:
-        if chunk.finish_reason is None:
-            print(chunk.delta.content, end="", flush=True)
+        print(chunk)
+        # if chunk.finish_reason is None:
+        #     print(chunk.delta.content, end="", flush=True)
 
 asyncio.run(main())

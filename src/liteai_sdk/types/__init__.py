@@ -1,18 +1,18 @@
-from dataclasses import dataclass
-from typing import Any, Literal
-from litellm.types.llms.openai import AllMessageValues
-from litellm.types.utils import Message
+import asyncio
+import dataclasses
+import queue
+from typing import Any, Generator, Literal
+from collections.abc import AsyncGenerator, Generator
 from ..tool import ToolFn, ToolDef
+from .message import AssistantMessageChunk, ChatMessage, AssistantMessage, ToolMessage
 
-ChatMessage = AllMessageValues
-ModelResponse = Message
-
-@dataclass
+@dataclasses.dataclass
 class LlmRequestParams:
     model: str
     messages: list[ChatMessage]
     tools: list[ToolFn | ToolDef] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
+    execute_tools: bool = False
 
     timeout_sec: float | None = None
     temperature: float | None = None
@@ -20,3 +20,13 @@ class LlmRequestParams:
     headers: dict[str, str] | None = None
 
     extra_args: dict[str, Any] | None = None
+
+# --- --- --- --- --- ---
+
+GenerateTextResponse = list[AssistantMessage | ToolMessage]
+StreamTextResponseSync = tuple[
+    Generator[AssistantMessageChunk],
+    queue.Queue[AssistantMessage | ToolMessage | None]]
+StreamTextResponseAsync = tuple[
+    AsyncGenerator[AssistantMessageChunk],
+    asyncio.Queue[AssistantMessage | ToolMessage | None]]
