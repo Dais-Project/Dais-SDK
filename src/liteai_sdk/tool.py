@@ -13,7 +13,7 @@ from typing import Annotated as _Annotated, Literal as _Literal, is_typeddict as
 from pydantic import BaseModel as PydanticBaseModel
 
 ToolFn = Callable[..., Any]
-RawToolDefinition = dict[str, Any]
+ToolDef = dict[str, Any]
 
 def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     """Convert Python type annotation to a JSON Schema for a parameter.
@@ -233,7 +233,7 @@ def generate_tool_definition(func: ToolFn) -> dict[str, Any]:
         },
     }
 
-def prepare_tools(tools: list[ToolFn | RawToolDefinition]) -> list[dict]:
+def prepare_tools(tools: list[ToolFn | ToolDef]) -> list[dict]:
     tool_defs = []
     for tool in tools:
         if callable(tool):

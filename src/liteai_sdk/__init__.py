@@ -1,10 +1,12 @@
 from typing import cast
-from litellm import completion, acompletion
+from litellm import CustomStreamWrapper, completion, acompletion
 from litellm.utils import get_valid_models
-from litellm.types.utils import LlmProviders, ModelResponse as LiteLlmModelResponse,\
+from litellm.types.utils import LlmProviders,\
+                                ModelResponse as LiteLlmModelResponse,\
+                                ModelResponseStream as LiteLlmModelResponseStream,\
                                 Choices as LiteLlmModelResponseChoices
 from .types import ChatMessage, LlmRequestParams, ModelResponse
-from .tool import ToolFn, RawToolDefinition, prepare_tools
+from .tool import ToolFn, ToolDef, prepare_tools
 
 class LLM:
     def __init__(self,
@@ -62,21 +64,22 @@ class LLM:
     
     def stream_text_sync(self, params: LlmRequestParams):
         response = completion(**self._parse_params_stream(params))
-        # response = cast(LiteLlmModelResponse, response)
-        # choices = cast(list[LiteLlmModelResponseChoices], response.choices)
-        # return choices[0].message
+        for chunk in response:
+            chunk = cast(LiteLlmModelResponseStream, chunk)
+            yield chunk.choices[0]
 
     async def stream_text(self, params: LlmRequestParams):
         response = await acompletion(**self._parse_params_stream(params))
-        # response = cast(LiteLlmModelResponse, response)
-        # choices = cast(list[LiteLlmModelResponseChoices], response.choices)
-        # return choices[0].message
+        response = cast(CustomStreamWrapper, response)
+        async for chunk in response:
+            chunk = cast(LiteLlmModelResponseStream, chunk)
+            yield chunk.choices[0]
 
 __all__ = [
     "LLM",
     "LlmRequestParams",
     "ToolFn",
-    "RawToolDefinition",
+    "ToolDef",
     "ChatMessage",
     "ModelResponse"
 ]

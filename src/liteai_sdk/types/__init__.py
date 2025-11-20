@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from litellm.types.llms.openai import AllMessageValues
 from litellm.types.utils import Message
-from .tool import ToolFn, RawToolDefinition
+from ..tool import ToolFn, ToolDef
 
 ChatMessage = AllMessageValues
 ModelResponse = Message
@@ -11,7 +11,7 @@ ModelResponse = Message
 class LlmRequestParams:
     model: str
     messages: list[ChatMessage]
-    tools: list[ToolFn | RawToolDefinition] | None = None
+    tools: list[ToolFn | ToolDef] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
 
     timeout_sec: float | None = None
