@@ -9,11 +9,35 @@ import types as _types
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date, datetime, time
 from typing import Annotated as _Annotated, Literal as _Literal, is_typeddict as _is_typeddict,\
-                   Any, get_args, get_origin, get_type_hints
+                   Any, Awaitable, get_args, get_origin, get_type_hints
 from pydantic import BaseModel as PydanticBaseModel
 
-ToolFn = Callable[..., Any]
-ToolDef = dict[str, Any]
+ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
+"""
+RawToolDef example:
+{
+    "name": "get_current_weather",
+    "description": "Get the current weather in a given location",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city and state, e.g. San Francisco, CA",
+            },
+            "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
+        },
+        "required": ["location"],
+    }
+}
+"""
+RawToolDef = dict[str, Any]
+
+@dataclasses.dataclass
+class ToolDef:
+    name: str
+    description: str
+    execute: ToolFn
 
 def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     """Convert Python type annotation to a JSON Schema for a parameter.
@@ -177,31 +201,7 @@ def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
 
     return {"type": "string"}
 
-def generate_tool_definition(func: ToolFn) -> dict[str, Any]:
-    """Convert a Python callable to OpenAI tools format.
-
-    Args:
-        func: A Python callable (function) to convert to a tool
-
-    Returns:
-        Dictionary in OpenAI tools format
-
-    Raises:
-        ValueError: If the function doesn't have proper docstring or type annotations
-
-    Example:
-        >>> def get_weather(location: str, unit: str = "celsius") -> str:
-        ...     '''Get weather information for a location.'''
-        ...     return f"Weather in {location} is sunny, 25°{unit[0].upper()}"
-        >>>
-        >>> tool = callable_to_tool(get_weather)
-        >>> # Returns OpenAI tools format dict
-
-    """
-    if not func.__doc__:
-        msg = f"Function {func.__name__} must have a docstring"
-        raise ValueError(msg)
-
+def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]], list[str]]:
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
 
@@ -224,6 +224,34 @@ def generate_tool_definition(func: ToolFn) -> dict[str, Any]:
         if param.default == inspect.Parameter.empty:
             required.append(param_name)
 
+    return properties, required
+
+def generate_tool_definition_from_callable(func: ToolFn) -> dict[str, Any]:
+    """Convert a Python callable to OpenAI tools format.
+
+    Args:
+        func: A Python callable (function) to convert to a tool
+
+    Returns:
+        Dictionary in OpenAI tools format
+
+    Raises:
+        ValueError: If the function doesn't have proper docstring or type annotations
+
+    Example:
+        >>> def get_weather(location: str, unit: str = "celsius") -> str:
+        ...     '''Get weather information for a location.'''
+        ...     return f"Weather in {location} is sunny, 25°{unit[0].upper()}"
+        >>>
+        >>> tool = generate_tool_definition_from_callable(get_weather)
+        >>> # Returns OpenAI tools format dict
+
+    """
+    if not func.__doc__:
+        msg = f"Function {func.__name__} must have a docstring"
+        raise ValueError(msg)
+
+    properties, required = _parse_callable_properties(func)
     return {
         "type": "function",
         "function": {
@@ -233,11 +261,47 @@ def generate_tool_definition(func: ToolFn) -> dict[str, Any]:
         },
     }
 
-def prepare_tools(tools: list[ToolFn | ToolDef]) -> list[dict]:
+def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> dict[str, Any]:
+    """Convert a ToolDef to OpenAI tools format.
+
+    Args:
+        tool_def: A ToolDef to convert to a tool
+
+    Returns:
+        Dictionary in OpenAI tools format
+
+    Example:
+        >>> tool_def = ToolDef(
+        ...     name="get_weather",
+        ...     description="Get weather information for a location.",
+        ...     execute=SomeFunction(),
+        ... )
+        >>> tool = generate_tool_definition_from_tool_def(tool_def)
+        >>> # Returns OpenAI tools format dict
+    """
+    properties, required = _parse_callable_properties(tool_def.execute)
+    return {
+        "type": "function",
+        "function": {
+            "name": tool_def.name,
+            "description": tool_def.description,
+            "parameters": {"type": "object", "properties": properties, "required": required},
+        },
+    }
+
+def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> dict[str, Any]:
+    return {
+        "type": "function",
+        "function": raw_tool_def,
+    }
+
+def prepare_tools(tools: list[ToolFn | ToolDef | RawToolDef]) -> list[dict]:
     tool_defs = []
     for tool in tools:
         if callable(tool):
-            tool_defs.append(generate_tool_definition(tool))
+            tool_defs.append(generate_tool_definition_from_callable(tool))
+        elif isinstance(tool, ToolDef):
+            tool_defs.append(generate_tool_definition_from_tool_def(tool))
         else:
-            tool_defs.append(tool)
+            tool_defs.append(generate_tool_definition_from_raw_tool_def(tool))
     return tool_defs

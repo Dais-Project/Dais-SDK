@@ -10,7 +10,9 @@ from litellm.types.utils import LlmProviders,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 Choices as LiteLlmModelResponseChoices
 from .stream import AssistantMessageCollector
-from .tool import ToolFn, ToolDef, prepare_tools
+from .tool import ToolFn, ToolDef, RawToolDef, prepare_tools
+from .tool.execute import execute_tool_sync, execute_tool
+from .tool.utils import filter_executable_tools, find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.message import AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
 
@@ -57,7 +59,7 @@ class LLM:
     def _should_resolve_tool_calls(
             params: LlmRequestParams,
             message: AssistantMessage,
-            ) -> tuple[list[ToolFn | ToolDef],
+            ) -> tuple[list[ToolFn | ToolDef | RawToolDef],
                        list[ChatCompletionAssistantToolCall]] | None:
         message.tool_calls
         condition = params.execute_tools and\
@@ -70,31 +72,45 @@ class LLM:
         return None
     
     @staticmethod
-    def _execute_tool_calls(
-        tools: list[ToolFn | ToolDef],
+    def _parse_tool_call(tool_call: ChatCompletionAssistantToolCall) -> tuple[str, str, str] | None:
+        id = tool_call.get("id")
+        function = tool_call.get("function")
+        function_name = function.get("name")
+        function_arguments = function.get("arguments")
+        if id is None or\
+           function is None or\
+           function_name is None or\
+           function_arguments is None: return None
+        return id, function_name, function_arguments
+
+    @staticmethod
+    async def _execute_tool_calls(
+        tools: list[ToolFn | ToolDef | RawToolDef],
         tool_calls: list[ChatCompletionAssistantToolCall]
         ) -> list[ToolMessage]:
-        def find_target_tool(tool_fns: list[ToolFn], tool_name: str) -> ToolFn | None:
-            target_tools = [tool for tool in tool_fns if tool.__name__ == tool_name]
-            if len(target_tools) > 0: return target_tools[0]
-            return None
-
-        tool_fns = list(filter(lambda tool: callable(tool), tools))
+        executable_tools = filter_executable_tools(tools)
         result = []
         for tool_call in tool_calls:
-            id = tool_call.get("id")
-            function = tool_call.get("function")
-            function_name = function.get("name")
-            function_arguments = function.get("arguments")
-            if id is None or\
-               function is None or\
-               function_name is None or\
-               function_arguments is None: continue
+            if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
+            id, function_name, function_arguments = tool_call_data
+            if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
+            ret = await execute_tool(target_tool, function_arguments)
+            result.append(ToolMessage(tool_call_id=id, content=json.dumps(ret)))
+        return result
 
-            if (target_tool := find_target_tool(tool_fns, function_name)) is None: continue
-            tool_call_args = cast(dict, json.loads(function_arguments))
-            tool_call_ret = target_tool(**tool_call_args)
-            result.append(ToolMessage(tool_call_id=id, content=json.dumps(tool_call_ret)))
+    @staticmethod
+    def _execute_tool_calls_sync(
+        tools: list[ToolFn | ToolDef | RawToolDef],
+        tool_calls: list[ChatCompletionAssistantToolCall]
+        ) -> list[ToolMessage]:
+        executable_tools = filter_executable_tools(tools)
+        result = []
+        for tool_call in tool_calls:
+            if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
+            id, function_name, function_arguments = tool_call_data
+            if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
+            ret = execute_tool_sync(target_tool, function_arguments)
+            result.append(ToolMessage(tool_call_id=id, content=json.dumps(ret)))
         return result
 
     def list_models(self) -> list[str]:
@@ -113,7 +129,7 @@ class LLM:
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
-            result += self._execute_tool_calls(tools, tool_calls)
+            result += self._execute_tool_calls_sync(tools, tool_calls)
         return result
 
     async def generate_text(self, params: LlmRequestParams) -> GenerateTextResponse:
@@ -125,7 +141,7 @@ class LLM:
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
-            result += self._execute_tool_calls(tools, tool_calls)
+            result += await self._execute_tool_calls(tools, tool_calls)
         return result
 
     def stream_text_sync(self, params: LlmRequestParams) -> StreamTextResponseSync:
@@ -140,7 +156,7 @@ class LLM:
             full_message_queue.put(message)
             if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
                 tools, tool_calls = tools_and_tool_calls
-                tool_messages = self._execute_tool_calls(tools, tool_calls)
+                tool_messages = self._execute_tool_calls_sync(tools, tool_calls)
                 for tool_message in tool_messages:
                     full_message_queue.put(tool_message)
             full_message_queue.put(None)
@@ -163,7 +179,7 @@ class LLM:
             await full_message_queue.put(message)
             if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
                 tools, tool_calls = tools_and_tool_calls
-                tool_messages = self._execute_tool_calls(tools, tool_calls)
+                tool_messages = await self._execute_tool_calls(tools, tool_calls)
                 for tool_message in tool_messages:
                     await full_message_queue.put(tool_message)
             await full_message_queue.put(None)
@@ -179,6 +195,7 @@ __all__ = [
     "LlmRequestParams",
     "ToolFn",
     "ToolDef",
+    "RawToolDef",
 
     "UserMessage",
     "SystemMessage",

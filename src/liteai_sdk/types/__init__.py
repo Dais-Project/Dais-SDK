@@ -3,14 +3,14 @@ import dataclasses
 import queue
 from typing import Any, Generator, Literal
 from collections.abc import AsyncGenerator, Generator
-from ..tool import ToolFn, ToolDef
+from ..tool import ToolFn, ToolDef, RawToolDef
 from .message import AssistantMessageChunk, ChatMessage, AssistantMessage, ToolMessage
 
 @dataclasses.dataclass
 class LlmRequestParams:
     model: str
     messages: list[ChatMessage]
-    tools: list[ToolFn | ToolDef] | None = None
+    tools: list[ToolFn | ToolDef | RawToolDef] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
     execute_tools: bool = False
 

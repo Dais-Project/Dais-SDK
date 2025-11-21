@@ -23,7 +23,7 @@ params = LlmRequestParams(
 
 print("User: ", "Please call the tool example_tool.")
 stream, full_responses = llm.stream_text_sync(params)
-print("Model: ", end="")
+print("Model: ")
 for chunk in stream:
     if chunk.content is not None:
         print(chunk.content, flush=True, end="")
