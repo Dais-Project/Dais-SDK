@@ -10,7 +10,7 @@ pip install liteai-sdk
 
 ### Develop with coding agent
 
-You can access the complete usage guidance with [llms.txt](https://github.com/BHznJNs/liteai/blob/main/llms.txt), just give it to your coding agent to tell it how to use LiteAI-SDK.
+You can access the complete usage guidance with [llms.txt](https://raw.githubusercontent.com/BHznJNs/liteai/refs/heads/main/llms.txt), just give it to your coding agent to tell it how to use LiteAI-SDK.
 
 ## Examples
 
