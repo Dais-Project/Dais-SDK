@@ -24,26 +24,6 @@ def read_file(file_path: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-def write_file(file_path: str, content: str) -> str:
-    """
-    Write content to a file
-    
-    Args:
-        file_path
-        content
-        
-    Returns:
-        Success message or error message
-    """
-    try:
-        # 确保目录存在
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        return f"成功写入文件：{file_path}"
-    except Exception as e:
-        return f"写入文件时出错：{str(e)}"
-
 
 def agent_loop():
     def attempt_completion():
@@ -61,7 +41,7 @@ def agent_loop():
     test_prompt1 = r"Please read the file `D:\MyPrograms\python_programs\temp.py` and tell me what it does."
     messages: list[ChatMessage] = [SystemMessage(SYSTEM_PROMPT), UserMessage(test_prompt1)]
 
-    tools = [read_file, write_file, attempt_completion]
+    tools = [read_file, attempt_completion]
 
     is_running = True
     
