@@ -14,7 +14,7 @@ from .tool import ToolFn, ToolDef, RawToolDef, prepare_tools
 from .tool.execute import execute_tool_sync, execute_tool
 from .tool.utils import filter_executable_tools, find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
-from .types.message import AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
+from .types.message import ChatMessage, AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
 
 class LLM:
     def __init__(self,
@@ -197,6 +197,7 @@ __all__ = [
     "ToolDef",
     "RawToolDef",
 
+    "ChatMessage",
     "UserMessage",
     "SystemMessage",
     "AssistantMessage",
