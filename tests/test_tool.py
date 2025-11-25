@@ -686,24 +686,24 @@ class TestToolExecution:
     # ------------------------------------------------------------------------
 
     def test_parse_arguments_simple(self):
-        from liteai_sdk.tool.execute import _parse_arguments
+        from liteai_sdk.tool.execute import parse_arguments
 
         arguments = '{"name": "Alice", "age": 30}'
-        result = _parse_arguments(arguments)
+        result = parse_arguments(arguments)
         assert result == {"name": "Alice", "age": 30}
 
     def test_parse_arguments_nested(self):
-        from liteai_sdk.tool.execute import _parse_arguments
+        from liteai_sdk.tool.execute import parse_arguments
 
         arguments = '{"user": {"name": "Bob", "roles": ["admin", "user"]}, "count": 5}'
-        result = _parse_arguments(arguments)
+        result = parse_arguments(arguments)
         assert result == {"user": {"name": "Bob", "roles": ["admin", "user"]}, "count": 5}
 
     def test_parse_arguments_empty(self):
-        from liteai_sdk.tool.execute import _parse_arguments
+        from liteai_sdk.tool.execute import parse_arguments
 
         arguments = '{}'
-        result = _parse_arguments(arguments)
+        result = parse_arguments(arguments)
         assert result == {}
 
     # ------------------------------------------------------------------------

@@ -10,13 +10,14 @@ llm = LLM(provider=LlmProviders.OPENAI,
           base_url=os.getenv("BASE_URL", ""))
 
 async def main():
-    stream = llm.stream_text(
+    message_chunk, full_message_queue = await llm.stream_text(
         LlmRequestParams(
             model="deepseek-v3.1",
             messages=[UserMessage("Hello world")]))
-    async for chunk in stream:
-        print(chunk)
-        # if chunk.finish_reason is None:
-        #     print(chunk.delta.content, end="", flush=True)
+    async for chunk in message_chunk:
+        print(chunk.content, end="", flush=True)
+    print()
+
+    print("Full message: ", await full_message_queue.get())
 
 asyncio.run(main())

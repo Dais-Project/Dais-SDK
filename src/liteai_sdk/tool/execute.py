@@ -3,45 +3,57 @@ import json
 from functools import singledispatch
 from typing import Any, Awaitable, Callable, cast
 from types import FunctionType, CoroutineType
-from . import ToolFn, ToolDef
-
-def _parse_arguments(arguments: str) -> dict:
-    args = json.loads(arguments)
-    return cast(dict, args)
+from . import ToolDef
 
 async def _coroutine_wrapper(awaitable: Awaitable[Any]) -> CoroutineType:
     return await awaitable
 
+def _arguments_normalizer(arguments: str | dict) -> dict:
+    if type(arguments) == str:
+        return parse_arguments(arguments)
+    elif type(arguments) == dict:
+        return arguments
+    else:
+        raise ValueError(f"Invalid arguments type: {type(arguments)}")
+
+def parse_arguments(arguments: str) -> dict:
+    args = json.loads(arguments)
+    return cast(dict, args)
+
 @singledispatch
-def execute_tool_sync(tool, arguments: str) -> Any: pass
+def execute_tool_sync(tool, arguments: str | dict) -> Any: pass
 
 @execute_tool_sync.register(FunctionType)
-def _(tool: Callable, arguments: str) -> Any:
-    if asyncio.iscoroutinefunction(tool):
+def _(toolfn: Callable, arguments: str | dict) -> Any:
+    arguments = _arguments_normalizer(arguments)
+    if asyncio.iscoroutinefunction(toolfn):
         return asyncio.run(
             _coroutine_wrapper(
-                tool(**_parse_arguments(arguments))))
-    return tool(**_parse_arguments(arguments))
+                toolfn(**arguments)))
+    return toolfn(**arguments)
 
 @execute_tool_sync.register(ToolDef)
-def _(tool: ToolDef, arguments: str):
-    if asyncio.iscoroutinefunction(tool.execute):
+def _(tooldef: ToolDef, arguments: str | dict):
+    arguments = _arguments_normalizer(arguments)
+    if asyncio.iscoroutinefunction(tooldef.execute):
         return asyncio.run(
             _coroutine_wrapper(
-                tool.execute(**_parse_arguments(arguments))))
-    return tool.execute(**_parse_arguments(arguments))
+                tooldef.execute(**arguments)))
+    return tooldef.execute(**arguments)
 
 @singledispatch
-async def execute_tool(tool, arguments: str) -> Any: pass
+async def execute_tool(tool, arguments: str | dict) -> Any: pass
 
 @execute_tool.register(FunctionType)
-async def _(toolfn: Callable, arguments: str) -> Any:
+async def _(toolfn: Callable, arguments: str | dict) -> Any:
+    arguments = _arguments_normalizer(arguments)
     if asyncio.iscoroutinefunction(toolfn):
-        return await toolfn(**_parse_arguments(arguments))
-    return toolfn(**_parse_arguments(arguments))
+        return await toolfn(**arguments)
+    return toolfn(**arguments)
 
 @execute_tool.register(ToolDef)
-async def _(tooldef: ToolDef, arguments: str):
+async def _(tooldef: ToolDef, arguments: str | dict):
+    arguments = _arguments_normalizer(arguments)
     if asyncio.iscoroutinefunction(tooldef.execute):
-        return await tooldef.execute(**_parse_arguments(arguments))
-    return tooldef.execute(**_parse_arguments(arguments))
+        return await tooldef.execute(**arguments)
+    return tooldef.execute(**arguments)

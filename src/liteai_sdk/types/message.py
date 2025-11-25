@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Literal
+import json
+from typing import Any, Literal
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 ChatCompletionAudioResponse
@@ -72,15 +73,17 @@ class AssistantMessage(ChatMessage):
 
 class ToolMessage(ChatMessage):
     role: Literal["tool"] = "tool"
-    def __init__(self, tool_call_id: str, content: str):
-        self.tool_call_id = tool_call_id
-        self.content = content
+    def __init__(self, id: str, name: str, arguments: dict, result: Any):
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+        self.result = result
 
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         return ChatCompletionToolMessage(
             role=self.role,
-            content=self.content,
-            tool_call_id=self.tool_call_id)
+            content=json.dumps(self.result),
+            tool_call_id=self.id)
 
 class SystemMessage(ChatMessage):
     role: Literal["system"] = "system"

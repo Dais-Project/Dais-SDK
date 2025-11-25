@@ -62,7 +62,7 @@ def agent_loop():
             if isinstance(message, AssistantMessage):
                 print(f"Model: {message.content}")
             elif isinstance(message, ToolMessage):
-                print(f"Tool: {message.content}")
+                print(f"Tool: {message.result}")
 
 if __name__ == "__main__":
     agent_loop()

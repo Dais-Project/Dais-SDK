@@ -67,5 +67,5 @@ for message in messages:
         case "assistant":
             print("Assistant: ", message.content)
         case "tool":
-            print("Tool: ", message.content)
+            print("Tool: ", message.result)
 ```

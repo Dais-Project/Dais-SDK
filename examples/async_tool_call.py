@@ -33,7 +33,7 @@ async def main():
             case "assistant":
                 print("Assistant: ", message.content)
             case "tool":
-                print("Tool: ", message.content)
+                print("Tool: ", message.result)
 
 if __name__ == "__main__":
     asyncio.run(main())

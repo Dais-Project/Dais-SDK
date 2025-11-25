@@ -11,7 +11,7 @@ from litellm.types.utils import LlmProviders,\
                                 Choices as LiteLlmModelResponseChoices
 from .stream import AssistantMessageCollector
 from .tool import ToolFn, ToolDef, RawToolDef, prepare_tools
-from .tool.execute import execute_tool_sync, execute_tool
+from .tool.execute import execute_tool_sync, execute_tool, parse_arguments
 from .tool.utils import filter_executable_tools, find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.message import ChatMessage, AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
@@ -94,8 +94,13 @@ class LLM:
             if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
             id, function_name, function_arguments = tool_call_data
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
-            ret = await execute_tool(target_tool, function_arguments)
-            result.append(ToolMessage(tool_call_id=id, content=json.dumps(ret)))
+            parsed_arguments = parse_arguments(function_arguments)
+            ret = await execute_tool(target_tool, parsed_arguments)
+            result.append(ToolMessage(
+                id=id,
+                name=function_name,
+                arguments=parsed_arguments,
+                result=ret))
         return result
 
     @staticmethod
@@ -109,8 +114,13 @@ class LLM:
             if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
             id, function_name, function_arguments = tool_call_data
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
-            ret = execute_tool_sync(target_tool, function_arguments)
-            result.append(ToolMessage(tool_call_id=id, content=json.dumps(ret)))
+            parsed_arguments = parse_arguments(function_arguments)
+            ret = execute_tool_sync(target_tool, parsed_arguments)
+            result.append(ToolMessage(
+                id=id,
+                name=function_name,
+                arguments=parsed_arguments,
+                result=ret))
         return result
 
     def list_models(self) -> list[str]:
