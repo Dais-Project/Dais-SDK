@@ -1,5 +1,6 @@
-from abc import ABC
 import json
+import dataclasses
+from abc import ABC
 from typing import Any, Literal
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
@@ -16,28 +17,26 @@ from litellm.types.llms.openai import (
     ChatCompletionSystemMessage,
 )
 
+@dataclasses.dataclass
 class ChatMessage(ABC):
     def to_litellm_message(self) -> AllMessageValues: ...
 
+@dataclasses.dataclass
 class UserMessage(ChatMessage):
+    content: OpenAIMessageContent
     role: Literal["user"] = "user"
-    def __init__(self, content: OpenAIMessageContent):
-        self.content = content
 
     def to_litellm_message(self) -> ChatCompletionUserMessage:
         return ChatCompletionUserMessage(role=self.role, content=self.content)
 
+@dataclasses.dataclass
 class AssistantMessage(ChatMessage):
+    content: str | None = None
+    reasoning_content: str | None = None
+    tool_calls: list[ChatCompletionAssistantToolCall] | None = None
+    audio: ChatCompletionAudioResponse | None = None
+    images: list[ChatCompletionImageURL] | None = None
     role: Literal["assistant"] = "assistant"
-    def __init__(self,
-                 content: str | None,
-                 reasoning_content: str | None = None,
-                 tool_calls: list[ChatCompletionAssistantToolCall] | None = None):
-        self.content = content
-        self.reasoning_content = reasoning_content
-        self.tool_calls = tool_calls
-        self.audio: ChatCompletionAudioResponse | None = None
-        self.images: list[ChatCompletionImageURL] | None = None
 
     @staticmethod
     def from_litellm_message(message: LiteLlmMessage) -> "AssistantMessage":
@@ -71,13 +70,13 @@ class AssistantMessage(ChatMessage):
                                               reasoning_content=self.reasoning_content,
                                               tool_calls=self.tool_calls)
 
+@dataclasses.dataclass
 class ToolMessage(ChatMessage):
+    id: str
+    name: str
+    arguments: dict
+    result: Any
     role: Literal["tool"] = "tool"
-    def __init__(self, id: str, name: str, arguments: dict, result: Any):
-        self.id = id
-        self.name = name
-        self.arguments = arguments
-        self.result = result
 
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         return ChatCompletionToolMessage(
@@ -85,24 +84,20 @@ class ToolMessage(ChatMessage):
             content=json.dumps(self.result),
             tool_call_id=self.id)
 
+@dataclasses.dataclass
 class SystemMessage(ChatMessage):
+    content: str
     role: Literal["system"] = "system"
-    def __init__(self, content: str):
-        self.content = content
 
     def to_litellm_message(self) -> ChatCompletionSystemMessage:
         return ChatCompletionSystemMessage(role=self.role, content=self.content)
 
+@dataclasses.dataclass
 class AssistantMessageChunk:
-    def __init__(self,
-                 content: str | None = None,
-                 reasoning_content: str | None = None,
-                 audio: ChatCompletionAudioResponse | None = None,
-                 images: list[ChatCompletionImageURL] | None = None):
-        self.content = content
-        self.reasoning_content = reasoning_content
-        self.audio = audio
-        self.images = images
+    content: str | None = None
+    reasoning_content: str | None = None
+    audio: ChatCompletionAudioResponse | None = None
+    images: list[ChatCompletionImageURL] | None = None
 
     @staticmethod
     def from_litellm_chunk(chunk: LiteLlmModelResponseStream) -> "AssistantMessageChunk":
