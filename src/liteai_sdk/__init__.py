@@ -1,5 +1,4 @@
 import asyncio
-import json
 import queue
 from typing import cast
 from collections.abc import AsyncGenerator, Generator
