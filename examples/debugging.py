@@ -1,0 +1,16 @@
+import os
+from dotenv import load_dotenv
+from liteai_sdk import enable_debugging, LLM, LlmProviders, LlmRequestParams, UserMessage
+
+load_dotenv()
+enable_debugging()
+
+llm = LLM(provider=LlmProviders.OPENAI,
+          api_key=os.getenv("API_KEY", ""),
+          base_url=os.getenv("BASE_URL", ""))
+
+response = llm.generate_text_sync(
+    LlmRequestParams(
+        model="deepseek-v3.1",
+        messages=[UserMessage("Hello!")]))
+print(response)

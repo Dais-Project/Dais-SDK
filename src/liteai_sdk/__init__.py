@@ -8,6 +8,7 @@ from litellm.types.utils import LlmProviders,\
                                 ModelResponse as LiteLlmModelResponse,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 Choices as LiteLlmModelResponseChoices
+from .debug import enable_debugging
 from .stream import AssistantMessageCollector
 from .tool import ToolFn, ToolDef, RawToolDef, prepare_tools
 from .tool.execute import execute_tool_sync, execute_tool, parse_arguments
@@ -200,6 +201,8 @@ class LLM:
         return returned_stream, full_message_queue
 
 __all__ = [
+    "enable_debugging",
+
     "LLM",
     "LlmRequestParams",
     "ToolFn",
