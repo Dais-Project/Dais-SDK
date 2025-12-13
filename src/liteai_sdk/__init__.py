@@ -3,6 +3,19 @@ import queue
 from typing import cast
 from collections.abc import AsyncGenerator, Generator
 from litellm import ChatCompletionAssistantToolCall, CustomStreamWrapper, completion, acompletion
+from litellm.exceptions import (  
+    AuthenticationError,
+    PermissionDeniedError,
+    RateLimitError,
+    ContextWindowExceededError,
+    BadRequestError,
+    InvalidRequestError,
+    InternalServerError,
+    ServiceUnavailableError,
+    ContentPolicyViolationError,
+    APIError,
+    Timeout,
+)
 from litellm.utils import get_valid_models
 from litellm.types.utils import LlmProviders,\
                                 ModelResponse as LiteLlmModelResponse,\
@@ -17,6 +30,22 @@ from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSyn
 from .types.message import ChatMessage, AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
 
 class LLM:
+    """
+    Possible exceptions raises for `generate_text` and `stream_text`:
+        - AuthenticationError
+        - PermissionDeniedError
+        - RateLimitError
+        - ContextWindowExceededError
+        - BadRequestError
+        - InvalidRequestError
+        - InternalServerError
+        - ServiceUnavailableError
+        - ContentPolicyViolationError
+
+        - APIError
+        - Timeout
+    """
+
     def __init__(self,
                  provider: LlmProviders,
                  base_url: str,
@@ -201,6 +230,19 @@ class LLM:
         return returned_stream, full_message_queue
 
 __all__ = [
+    # Exceptions
+    "AuthenticationError",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "ContextWindowExceededError",
+    "BadRequestError",
+    "InvalidRequestError",
+    "InternalServerError",
+    "ServiceUnavailableError",
+    "ContentPolicyViolationError",
+    "APIError",
+    "Timeout",
+
     "enable_debugging",
 
     "LLM",
