@@ -101,10 +101,10 @@ class AssistantMessageChunk:
     audio: ChatCompletionAudioResponse | None = None
     images: list[ChatCompletionImageURL] | None = None
 
-    @staticmethod
-    def from_litellm_chunk(chunk: LiteLlmModelResponseStream) -> "AssistantMessageChunk":
+    @classmethod
+    def from_litellm_chunk(cls, chunk: LiteLlmModelResponseStream) -> "AssistantMessageChunk":
         delta = chunk.choices[0].delta
-        temp_chunk = AssistantMessageChunk()
+        temp_chunk = cls()
         if delta.get("content"):
             temp_chunk.content = delta.content
         if delta.get("reasoning_content"):
