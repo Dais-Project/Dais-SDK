@@ -42,7 +42,7 @@ class ToolCallCollector:
 
 class AssistantMessageCollector:
     def __init__(self):
-        self.message_buf = AssistantMessage(None)
+        self.message_buf = AssistantMessage(content=None)
         self.tool_call_collector = ToolCallCollector()
 
     def collect(self, chunk: LiteLlmModelResponseStream):
