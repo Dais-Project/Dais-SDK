@@ -34,7 +34,7 @@ from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMes
 
 class LLM:
     """
-    The `stream_text` API will returns ToolMessage only if `params.execute_tools` is True.
+    The `stream_text` API will returns ToolMessage in the queue only if `params.execute_tools` is True.
 
     Possible exceptions raises for `generate_text` and `stream_text`:
         - AuthenticationError
