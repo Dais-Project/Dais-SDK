@@ -123,19 +123,25 @@ class LLM:
         tool_calls: list[ChatCompletionAssistantToolCall]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
-        result = []
+        results = []
         for tool_call in tool_calls:
             if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
             id, function_name, function_arguments = tool_call_data
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
             parsed_arguments = parse_arguments(function_arguments)
-            ret = await execute_tool(target_tool, parsed_arguments)
-            result.append(ToolMessage(
+            result, error = None, None
+
+            try:
+                result = await execute_tool(target_tool, parsed_arguments)
+            except Exception as e:
+                error = f"{type(e).__name__}: {str(e)}"
+            results.append(ToolMessage(
                 id=id,
                 name=function_name,
                 arguments=parsed_arguments,
-                result=ret))
-        return result
+                result=result,
+                error=error))
+        return results
 
     @staticmethod
     def _execute_tool_calls_sync(
@@ -143,19 +149,25 @@ class LLM:
         tool_calls: list[ChatCompletionAssistantToolCall]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
-        result = []
+        results = []
         for tool_call in tool_calls:
             if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
             id, function_name, function_arguments = tool_call_data
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
             parsed_arguments = parse_arguments(function_arguments)
-            ret = execute_tool_sync(target_tool, parsed_arguments)
-            result.append(ToolMessage(
+            
+            result, error = None, None
+            try:
+                result = execute_tool_sync(target_tool, parsed_arguments)
+            except Exception as e:
+                error = f"{type(e).__name__}: {str(e)}"
+            results.append(ToolMessage(
                 id=id,
                 name=function_name,
                 arguments=parsed_arguments,
-                result=ret))
-        return result
+                result=result,
+                error=error))
+        return results
 
     def list_models(self) -> list[str]:
         return get_valid_models(

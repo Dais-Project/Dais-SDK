@@ -76,6 +76,7 @@ class ToolMessage(ChatMessage):
     name: str
     arguments: dict
     result: Any
+    error: str | None = None
     role: Literal["tool"] = "tool"
 
     @field_serializer("result", when_used="json")
@@ -83,9 +84,14 @@ class ToolMessage(ChatMessage):
         return json.dumps(result, ensure_ascii=False)
 
     def to_litellm_message(self) -> ChatCompletionToolMessage:
+        if self.error is not None:
+            content = json.dumps({"error": self.error}, ensure_ascii=False)
+        else:
+            content = json.dumps(self.result, ensure_ascii=False)
+
         return ChatCompletionToolMessage(
             role=self.role,
-            content=json.dumps(self.result, ensure_ascii=False),
+            content=content,
             tool_call_id=self.id)
 
 class SystemMessage(ChatMessage):
