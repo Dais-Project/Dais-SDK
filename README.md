@@ -30,7 +30,7 @@ llm = LLM(provider=LlmProviders.OPENAI,
 response = llm.generate_text_sync( # sync API of generate_text
     LlmRequestParams(
         model="deepseek-v3.1",
-        messages=[UserMessage("Hello.")]))
+        messages=[UserMessage(content="Hello.")]))
 print(response)
 ```
 
@@ -58,7 +58,7 @@ params = LlmRequestParams(
         model="deepseek-v3.1",
         tools=[example_tool],
         execute_tools=True,
-        messages=[UserMessage("Please call the tool example_tool.")])
+        messages=[UserMessage(content="Please call the tool example_tool.")])
 
 print("User: ", "Please call the tool example_tool.")
 messages = llm.generate_text_sync(params)

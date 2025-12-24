@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, TextChunk
 
 load_dotenv()
 
@@ -19,14 +19,15 @@ params = LlmRequestParams(
         model="deepseek-v3.1",
         tools=[example_tool],
         execute_tools=True,
-        messages=[UserMessage("Please call the tool example_tool twice.")])
+        messages=[UserMessage(content="Please call the tool example_tool twice.")])
 
 print("User: ", "Please call the tool example_tool.")
 stream, full_responses = llm.stream_text_sync(params)
 print("Model: ")
 for chunk in stream:
-    if chunk.content is not None:
-        print(chunk.content, flush=True, end="")
+    match chunk:
+        case TextChunk(content=content):
+            print(content, flush=True, end="")
 print("\n")
 
 while (response := full_responses.get()) is not None:

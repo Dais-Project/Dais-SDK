@@ -12,5 +12,5 @@ llm = LLM(provider=LlmProviders.OPENAI,
 response = llm.generate_text_sync(
     LlmRequestParams(
         model="deepseek-v3.1",
-        messages=[UserMessage("Hello!")]))
+        messages=[UserMessage(content="Hello!")]))
 print(response)

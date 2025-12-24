@@ -4,7 +4,7 @@ import queue
 from typing import Any, Generator, Literal
 from collections.abc import AsyncGenerator, Generator
 from ..tool import ToolFn, ToolDef, RawToolDef
-from .message import AssistantMessageChunk, ChatMessage, AssistantMessage, ToolMessage
+from .message import ChatMessage, AssistantMessage, ToolMessage, MessageChunk
 
 @dataclasses.dataclass
 class LlmRequestParams:
@@ -25,8 +25,8 @@ class LlmRequestParams:
 
 GenerateTextResponse = list[AssistantMessage | ToolMessage]
 StreamTextResponseSync = tuple[
-    Generator[AssistantMessageChunk],
+    Generator[MessageChunk],
     queue.Queue[AssistantMessage | ToolMessage | None]]
 StreamTextResponseAsync = tuple[
-    AsyncGenerator[AssistantMessageChunk],
+    AsyncGenerator[MessageChunk],
     asyncio.Queue[AssistantMessage | ToolMessage | None]]

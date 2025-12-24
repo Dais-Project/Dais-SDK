@@ -24,7 +24,7 @@ async def main():
             model="deepseek-v3.1",
             tools=[example_tool],
             execute_tools=True,
-            messages=[UserMessage("Please call the tool example_tool.")])
+            messages=[UserMessage(content="Please call the tool example_tool.")])
 
     print("User: ", "Please call the tool example_tool.")
     messages = await llm.generate_text(params)

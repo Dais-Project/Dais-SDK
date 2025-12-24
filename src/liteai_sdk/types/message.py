@@ -6,7 +6,8 @@ from pydantic import BaseModel, ConfigDict, field_serializer
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 ChatCompletionAudioResponse,\
-                                ChatCompletionMessageToolCall
+                                ChatCompletionMessageToolCall,\
+                                ChatCompletionDeltaToolCall
 from litellm.types.llms.openai import (
     AllMessageValues,
     OpenAIMessageContent,
@@ -95,22 +96,50 @@ class SystemMessage(ChatMessage):
         return ChatCompletionSystemMessage(role=self.role, content=self.content)
 
 @dataclasses.dataclass
-class AssistantMessageChunk:
-    content: str | None = None
-    reasoning_content: str | None = None
-    audio: ChatCompletionAudioResponse | None = None
-    images: list[ChatCompletionImageURL] | None = None
+class TextChunk:
+    content: str
 
-    @classmethod
-    def from_litellm_chunk(cls, chunk: LiteLlmModelResponseStream) -> "AssistantMessageChunk":
-        delta = chunk.choices[0].delta
-        temp_chunk = cls()
-        if delta.get("content"):
-            temp_chunk.content = delta.content
-        if delta.get("reasoning_content"):
-            temp_chunk.reasoning_content = delta.reasoning_content
-        if delta.get("audio"):
-            temp_chunk.audio = delta.audio
-        if delta.get("images"):
-            temp_chunk.images = delta.images
-        return temp_chunk
+@dataclasses.dataclass
+class ReasoningChunk:
+    content: str
+
+@dataclasses.dataclass
+class AudioChunk:
+    data: ChatCompletionAudioResponse
+
+@dataclasses.dataclass
+class ImageChunk:
+    data: list[ChatCompletionImageURL]
+
+@dataclasses.dataclass
+class ToolCallChunk:
+    id: str | None
+    name: str | None
+    arguments: str
+    index: int
+
+MessageChunk = TextChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
+
+def openai_chunk_normalizer(
+        chunk: LiteLlmModelResponseStream
+        ) -> list[MessageChunk]:
+    if len(chunk.choices) == 0: return []
+
+    result = []
+    delta = chunk.choices[0].delta
+    if delta.get("content"):
+        result.append(TextChunk(cast(str, delta.content)))
+    if delta.get("reasoning_content"):
+        result.append(ReasoningChunk(cast(str, delta.reasoning_content)))
+    if delta.get("audio"):
+        result.append(AudioChunk(cast(ChatCompletionAudioResponse, delta.audio)))
+    if delta.get("images"):
+        result.append(ImageChunk(cast(list[ChatCompletionImageURL], delta.images)))
+    if delta.get("tool_calls"):
+        for tool_call in cast(list[ChatCompletionDeltaToolCall], delta.tool_calls):
+            result.append(ToolCallChunk(
+                tool_call.id,
+                tool_call.function.name,
+                tool_call.function.arguments,
+                tool_call.index))
+    return result

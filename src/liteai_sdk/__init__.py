@@ -28,10 +28,14 @@ from .tool.execute import execute_tool_sync, execute_tool, parse_arguments
 from .tool.utils import filter_executable_tools, find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.exceptions import *
-from .types.message import ChatMessage, AssistantMessageChunk, UserMessage, SystemMessage, AssistantMessage, ToolMessage
+from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
+                           MessageChunk, TextChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
+                           openai_chunk_normalizer
 
 class LLM:
     """
+    The `stream_text` API will returns ToolMessage only if `params.execute_tools` is True.
+
     Possible exceptions raises for `generate_text` and `stream_text`:
         - AuthenticationError
         - PermissionDeniedError
@@ -185,11 +189,11 @@ class LLM:
         return result
 
     def stream_text_sync(self, params: LlmRequestParams) -> StreamTextResponseSync:
-        def stream(response: CustomStreamWrapper) -> Generator[AssistantMessageChunk]:
+        def stream(response: CustomStreamWrapper) -> Generator[MessageChunk]:
             nonlocal message_collector
             for chunk in response:
                 chunk = cast(LiteLlmModelResponseStream, chunk)
-                yield AssistantMessageChunk.from_litellm_chunk(chunk)
+                yield from openai_chunk_normalizer(chunk)
                 message_collector.collect(chunk)
 
             message = message_collector.get_message()
@@ -208,11 +212,12 @@ class LLM:
         return returned_stream, full_message_queue
 
     async def stream_text(self, params: LlmRequestParams) -> StreamTextResponseAsync:
-        async def stream(response: CustomStreamWrapper) -> AsyncGenerator[AssistantMessageChunk]:
+        async def stream(response: CustomStreamWrapper) -> AsyncGenerator[TextChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk]:
             nonlocal message_collector
             async for chunk in response:
                 chunk = cast(LiteLlmModelResponseStream, chunk)
-                yield AssistantMessageChunk.from_litellm_chunk(chunk)
+                for normalized_chunk in openai_chunk_normalizer(chunk):
+                    yield normalized_chunk
                 message_collector.collect(chunk)
 
             message = message_collector.get_message()
@@ -257,7 +262,13 @@ __all__ = [
     "SystemMessage",
     "AssistantMessage",
     "ToolMessage",
-    "AssistantMessageChunk",
+
+    "MessageChunk",
+    "TextChunk",
+    "ReasoningChunk",
+    "AudioChunk",
+    "ImageChunk",
+    "ToolCallChunk",
 
     "GenerateTextResponse",
     "StreamTextResponseSync",

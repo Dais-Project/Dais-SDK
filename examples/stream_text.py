@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, TextChunk
 
 load_dotenv()
 
@@ -13,9 +13,11 @@ async def main():
     message_chunk, full_message_queue = await llm.stream_text(
         LlmRequestParams(
             model="deepseek-v3.1",
-            messages=[UserMessage("Hello world")]))
+            messages=[UserMessage(content="Hello world")]))
     async for chunk in message_chunk:
-        print(chunk.content, end="", flush=True)
+        match chunk:
+            case TextChunk(content=content):
+                print(content, end="")
     print()
 
     print("Full message: ", await full_message_queue.get())

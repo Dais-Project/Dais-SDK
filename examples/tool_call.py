@@ -19,7 +19,7 @@ params = LlmRequestParams(
         model="deepseek-v3.1",
         tools=[example_tool],
         execute_tools=True,
-        messages=[UserMessage("Please call the tool example_tool.")])
+        messages=[UserMessage(content="Please call the tool example_tool.")])
 
 print("User: ", "Please call the tool example_tool.")
 messages = llm.generate_text_sync(params)
@@ -28,4 +28,4 @@ for message in messages:
         case "assistant":
             print("Assistant: ", message.content)
         case "tool":
-            print("Tool: ", message.content)
+            print("Tool: ", message.result)

@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from liteai_sdk import LLM, LlmProviders, LlmRequestParams,\
-                       ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage
+                       UserMessage, SystemMessage, AssistantMessage, ToolMessage
 
 load_dotenv()
 
@@ -39,12 +39,12 @@ def agent_loop():
               base_url=os.getenv("BASE_URL", ""))
     
     test_prompt1 = r"Please read the file `D:\MyPrograms\python_programs\temp.py` and tell me what it does."
-    messages: list[ChatMessage] = [SystemMessage(SYSTEM_PROMPT), UserMessage(test_prompt1)]
+    messages = [SystemMessage(content=SYSTEM_PROMPT), UserMessage(content=test_prompt1)]
 
     tools = [read_file, attempt_completion]
 
     is_running = True
-    
+
     print(f"User: {test_prompt1}")
     
     while is_running:
