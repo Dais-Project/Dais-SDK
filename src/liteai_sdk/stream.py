@@ -12,15 +12,13 @@ class ToolCallTemp:
 
 class ToolCallCollector:
     def __init__(self):
-        self.tool_call_buf: list[ToolCallTemp] = []
-        self._max_index = 0
+        self.tool_call_map: dict[int, ToolCallTemp] = {}
 
     def collect(self, tool_call_chunk: ChatCompletionDeltaToolCall):
-        if tool_call_chunk.index >= self._max_index:
-            self._max_index = tool_call_chunk.index
-            self.tool_call_buf.append(ToolCallTemp())
+        if tool_call_chunk.index not in self.tool_call_map:
+            self.tool_call_map[tool_call_chunk.index] = ToolCallTemp()
 
-        temp_tool_call = self.tool_call_buf[tool_call_chunk.index]
+        temp_tool_call = self.tool_call_map[tool_call_chunk.index]
         if tool_call_chunk.get("id"):
             temp_tool_call.id = tool_call_chunk.id
         if tool_call_chunk.function.get("name"):
@@ -38,7 +36,7 @@ class ToolCallCollector:
                 "arguments": tool_call.arguments,
             },
             "type": "function"
-        } for tool_call in self.tool_call_buf]
+        } for tool_call in self.tool_call_map.values()]
 
 class AssistantMessageCollector:
     def __init__(self):
@@ -63,7 +61,7 @@ class AssistantMessageCollector:
             assert delta.tool_calls is not None
             for tool_call_chunk in delta.tool_calls:
                 self.tool_call_collector.collect(tool_call_chunk)
-        
+
         if delta.get("images"):
             assert delta.images is not None
             if self.message_buf.images is None:
@@ -77,3 +75,8 @@ class AssistantMessageCollector:
     def get_message(self) -> AssistantMessage:
         self.message_buf.tool_calls = self.tool_call_collector.get_tool_calls()
         return self.message_buf
+
+    def clear(self):
+        """
+        This class will be created for each stream, so we don't need to clear it.
+        """
