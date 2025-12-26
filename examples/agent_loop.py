@@ -38,7 +38,7 @@ def agent_loop():
               api_key=os.getenv("API_KEY", ""),
               base_url=os.getenv("BASE_URL", ""))
     
-    test_prompt1 = r"Please read the file `D:\MyPrograms\python_programs\temp.py` and tell me what it does."
+    test_prompt1 = r"Please read the python script `D:\MyPrograms\python_programs\temp.py` and tell me what it does."
     messages = [SystemMessage(content=SYSTEM_PROMPT), UserMessage(content=test_prompt1)]
 
     tools = [read_file, attempt_completion]
@@ -47,7 +47,12 @@ def agent_loop():
 
     print(f"User: {test_prompt1}")
     
+    loop_count = 0
+
     while is_running:
+        loop_count += 1
+        print(f"Loop count: {loop_count}")
+
         params = LlmRequestParams(
             model="deepseek-v3.1",
             messages=messages,
@@ -58,7 +63,7 @@ def agent_loop():
         responses = llm.generate_text_sync(params)
         messages += responses
 
-        for message in messages:
+        for message in responses:
             if isinstance(message, AssistantMessage):
                 print(f"Model: {message.content}")
             elif isinstance(message, ToolMessage):
