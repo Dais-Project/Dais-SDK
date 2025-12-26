@@ -66,6 +66,7 @@ class ToolMessage(ChatMessage):
             content=content,
             tool_call_id=self.id)
 
+ToolCallTuple = tuple[str, str, str]
 class AssistantMessage(ChatMessage):
     content: str | None = None
     reasoning_content: str | None = None
@@ -100,8 +101,6 @@ class AssistantMessage(ChatMessage):
                                               content=self.content,
                                               reasoning_content=self.reasoning_content,
                                               tool_calls=self.tool_calls)
-
-    ToolCallTuple = tuple[str, str, str]
 
     def parse_tool_calls(self) -> list[ToolCallTuple] | None:
         if self.tool_calls is None: return None

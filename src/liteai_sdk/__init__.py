@@ -31,7 +31,7 @@ from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSyn
 from .types.exceptions import *
 from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
                            MessageChunk, TextChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
-                           openai_chunk_normalizer
+                           ToolCallTuple, openai_chunk_normalizer
 
 class LLM:
     """
@@ -66,7 +66,7 @@ class LLM:
             params: LlmRequestParams,
             message: AssistantMessage,
             ) -> tuple[list[ToolFn | ToolDef | RawToolDef],
-                       list[AssistantMessage.ToolCallTuple]] | None:
+                       list[ToolCallTuple]] | None:
         parsed_tool_calls = message.parse_tool_calls()
         condition = params.execute_tools and\
                     params.tools is not None and\
@@ -80,7 +80,7 @@ class LLM:
     @staticmethod
     async def _execute_tool_calls(
         tools: list[ToolFn | ToolDef | RawToolDef],
-        tool_call_tuples: list[AssistantMessage.ToolCallTuple]
+        tool_call_tuples: list[ToolCallTuple]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
         results = []
@@ -104,7 +104,7 @@ class LLM:
     @staticmethod
     def _execute_tool_calls_sync(
         tools: list[ToolFn | ToolDef | RawToolDef],
-        tool_call_tuples: list[AssistantMessage.ToolCallTuple]
+        tool_call_tuples: list[ToolCallTuple]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
         results = []
@@ -132,7 +132,7 @@ class LLM:
             api_base=self.base_url,
             api_key=self.api_key)
 
-    def generate_text_sync(self, params: LlmRequestParams):
+    def generate_text_sync(self, params: LlmRequestParams) -> GenerateTextResponse:
         response = completion(**self._param_parser.parse_nonstream(params))
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
