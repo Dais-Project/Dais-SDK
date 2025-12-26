@@ -2,7 +2,7 @@ import asyncio
 import queue
 from typing import cast
 from collections.abc import AsyncGenerator, Generator
-from litellm import ChatCompletionAssistantToolCall, CustomStreamWrapper, completion, acompletion
+from litellm import CustomStreamWrapper, completion, acompletion
 from litellm.exceptions import (  
     AuthenticationError,
     PermissionDeniedError,
@@ -24,8 +24,8 @@ from litellm.types.utils import LlmProviders,\
 from .debug import enable_debugging
 from .param_parser import ParamParser
 from .stream import AssistantMessageCollector
-from .tool import ToolFn, ToolDef, RawToolDef, prepare_tools
-from .tool.execute import execute_tool_sync, execute_tool, parse_arguments
+from .tool import ToolFn, ToolDef, RawToolDef
+from .tool.execute import execute_tool_sync, execute_tool
 from .tool.utils import filter_executable_tools, find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.exceptions import *
@@ -66,51 +66,37 @@ class LLM:
             params: LlmRequestParams,
             message: AssistantMessage,
             ) -> tuple[list[ToolFn | ToolDef | RawToolDef],
-                       list[ChatCompletionAssistantToolCall]] | None:
-        message.tool_calls
+                       list[AssistantMessage.ToolCallTuple]] | None:
+        parsed_tool_calls = message.parse_tool_calls()
         condition = params.execute_tools and\
                     params.tools is not None and\
-                    message.tool_calls is not None
+                    parsed_tool_calls is not None
         if condition:
             assert params.tools is not None
-            assert message.tool_calls is not None
-            return params.tools, message.tool_calls
+            assert parsed_tool_calls is not None
+            return params.tools, parsed_tool_calls
         return None
-    
-    @staticmethod
-    def _parse_tool_call(tool_call: ChatCompletionAssistantToolCall) -> tuple[str, str, str] | None:
-        id = tool_call.get("id")
-        function = tool_call.get("function")
-        function_name = function.get("name")
-        function_arguments = function.get("arguments")
-        if id is None or\
-           function is None or\
-           function_name is None or\
-           function_arguments is None: return None
-        return id, function_name, function_arguments
 
     @staticmethod
     async def _execute_tool_calls(
         tools: list[ToolFn | ToolDef | RawToolDef],
-        tool_calls: list[ChatCompletionAssistantToolCall]
+        tool_call_tuples: list[AssistantMessage.ToolCallTuple]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
         results = []
-        for tool_call in tool_calls:
-            if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
-            id, function_name, function_arguments = tool_call_data
+        for tool_call_tuple in tool_call_tuples:
+            id, function_name, function_arguments = tool_call_tuple
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
-            parsed_arguments = parse_arguments(function_arguments)
             result, error = None, None
 
             try:
-                result = await execute_tool(target_tool, parsed_arguments)
+                result = await execute_tool(target_tool, function_arguments)
             except Exception as e:
                 error = f"{type(e).__name__}: {str(e)}"
             results.append(ToolMessage(
                 id=id,
                 name=function_name,
-                arguments=parsed_arguments,
+                arguments=function_arguments,
                 result=result,
                 error=error))
         return results
@@ -118,25 +104,23 @@ class LLM:
     @staticmethod
     def _execute_tool_calls_sync(
         tools: list[ToolFn | ToolDef | RawToolDef],
-        tool_calls: list[ChatCompletionAssistantToolCall]
+        tool_call_tuples: list[AssistantMessage.ToolCallTuple]
         ) -> list[ToolMessage]:
         executable_tools = filter_executable_tools(tools)
         results = []
-        for tool_call in tool_calls:
-            if (tool_call_data := LLM._parse_tool_call(tool_call)) is None: continue
-            id, function_name, function_arguments = tool_call_data
+        for tool_call_tuple in tool_call_tuples:
+            id, function_name, function_arguments = tool_call_tuple
             if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
-            parsed_arguments = parse_arguments(function_arguments)
-            
+
             result, error = None, None
             try:
-                result = execute_tool_sync(target_tool, parsed_arguments)
+                result = execute_tool_sync(target_tool, function_arguments)
             except Exception as e:
                 error = f"{type(e).__name__}: {str(e)}"
             results.append(ToolMessage(
                 id=id,
                 name=function_name,
-                arguments=parsed_arguments,
+                arguments=function_arguments,
                 result=result,
                 error=error))
         return results

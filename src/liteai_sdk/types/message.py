@@ -2,7 +2,7 @@ import json
 import dataclasses
 from abc import ABC, abstractmethod
 from typing import Any, Literal, cast
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 ChatCompletionAudioResponse,\
@@ -25,7 +25,7 @@ class ChatMessage(BaseModel, ABC):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
-    
+
     @abstractmethod
     def to_litellm_message(self) -> AllMessageValues: ...
 
@@ -35,6 +35,36 @@ class UserMessage(ChatMessage):
 
     def to_litellm_message(self) -> ChatCompletionUserMessage:
         return ChatCompletionUserMessage(role=self.role, content=self.content)
+
+class ToolMessage(ChatMessage):
+    id: str
+    name: str
+    arguments: str
+    result: str | None = None
+    error: str | None = None
+    role: Literal["tool"] = "tool"
+
+    @field_validator("result", mode="before")
+    def validate_result(cls, v: Any) -> Any:
+        if v is None: return v
+        if isinstance(v, str): return v
+        return json.dumps(v, ensure_ascii=False)
+
+    def to_litellm_message(self) -> ChatCompletionToolMessage:
+        if self.result is None and self.error is None:
+            raise ValueError(f"ToolMessage({self.id}, {self.name}) is incomplete, "
+                              "result and error cannot be both None")
+
+        if self.error is not None:
+            content = json.dumps({"error": self.error}, ensure_ascii=False)
+        else:
+            assert self.result is not None
+            content = self.result
+
+        return ChatCompletionToolMessage(
+            role=self.role,
+            content=content,
+            tool_call_id=self.id)
 
 class AssistantMessage(ChatMessage):
     content: str | None = None
@@ -71,28 +101,45 @@ class AssistantMessage(ChatMessage):
                                               reasoning_content=self.reasoning_content,
                                               tool_calls=self.tool_calls)
 
-class ToolMessage(ChatMessage):
-    id: str
-    name: str
-    arguments: dict
-    result: Any
-    error: str | None = None
-    role: Literal["tool"] = "tool"
+    ToolCallTuple = tuple[str, str, str]
 
-    @field_serializer("result", when_used="json")
-    def serialize_result(self, result: Any) -> str:
-        return json.dumps(result, ensure_ascii=False)
+    def parse_tool_calls(self) -> list[ToolCallTuple] | None:
+        if self.tool_calls is None: return None
+        results = []
+        for tool_call in self.tool_calls:
+            id = tool_call.get("id")
+            function = tool_call.get("function") # this can not be None
+            function_name = function.get("name")
+            function_arguments = function.get("arguments")
+            if id is None or\
+               function is None or\
+               function_name is None or\
+               function_arguments is None:
+                return None
+            results.append((id, function_name, function_arguments))
+        return results
 
-    def to_litellm_message(self) -> ChatCompletionToolMessage:
-        if self.error is not None:
-            content = json.dumps({"error": self.error}, ensure_ascii=False)
-        else:
-            content = json.dumps(self.result, ensure_ascii=False)
+    def get_partial_tool_message(self) -> list[ToolMessage] | None:
+        """
+        Get a partial tool message from the assistant message.
+        The returned tool message is not complete,
+        it only contains the tool call id, name and arguments.
+        Returns None if there is no tool call in the assistant message.
+        """
+        results = []
+        parsed_tool_calls = self.parse_tool_calls()
+        if parsed_tool_calls is None: return None
 
-        return ChatCompletionToolMessage(
-            role=self.role,
-            content=content,
-            tool_call_id=self.id)
+        for tool_call in parsed_tool_calls:
+            id, name, arguments = tool_call
+            results.append(ToolMessage(
+                id=id,
+                name=name,
+                arguments=arguments,
+                result=None,
+                error=None,
+            ))
+        return results
 
 class SystemMessage(ChatMessage):
     content: str

@@ -9,16 +9,13 @@ async def _coroutine_wrapper(awaitable: Awaitable[Any]) -> CoroutineType:
     return await awaitable
 
 def _arguments_normalizer(arguments: str | dict) -> dict:
-    if type(arguments) == str:
-        return parse_arguments(arguments)
-    elif type(arguments) == dict:
+    if isinstance(arguments, str):
+        parsed = json.loads(arguments)
+        return cast(dict, parsed)
+    elif isinstance(arguments, dict):
         return arguments
     else:
         raise ValueError(f"Invalid arguments type: {type(arguments)}")
-
-def parse_arguments(arguments: str) -> dict:
-    args = json.loads(arguments)
-    return cast(dict, args)
 
 @singledispatch
 def execute_tool_sync(tool, arguments: str | dict) -> Any: pass
@@ -33,7 +30,7 @@ def _(toolfn: Callable, arguments: str | dict) -> Any:
     return toolfn(**arguments)
 
 @execute_tool_sync.register(ToolDef)
-def _(tooldef: ToolDef, arguments: str | dict):
+def _(tooldef: ToolDef, arguments: str | dict) -> Any:
     arguments = _arguments_normalizer(arguments)
     if asyncio.iscoroutinefunction(tooldef.execute):
         return asyncio.run(
@@ -52,7 +49,7 @@ async def _(toolfn: Callable, arguments: str | dict) -> Any:
     return toolfn(**arguments)
 
 @execute_tool.register(ToolDef)
-async def _(tooldef: ToolDef, arguments: str | dict):
+async def _(tooldef: ToolDef, arguments: str | dict) -> Any:
     arguments = _arguments_normalizer(arguments)
     if asyncio.iscoroutinefunction(tooldef.execute):
         return await tooldef.execute(**arguments)
