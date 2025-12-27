@@ -98,7 +98,7 @@ class AssistantMessage(ChatMessage):
 
     def to_litellm_message(self) -> ChatCompletionAssistantMessage:
         return ChatCompletionAssistantMessage(role=self.role,
-                                              content=self.content,
+                                              content=self.content or "",
                                               reasoning_content=self.reasoning_content,
                                               tool_calls=self.tool_calls)
 
