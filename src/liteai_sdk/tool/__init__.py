@@ -13,6 +13,7 @@ from typing import Annotated as _Annotated, Literal as _Literal, is_typeddict as
 from pydantic import BaseModel as PydanticBaseModel
 
 ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
+
 """
 RawToolDef example:
 {
@@ -38,6 +39,8 @@ class ToolDef:
     name: str
     description: str
     execute: ToolFn
+
+ToolLike = ToolDef | RawToolDef | ToolFn
 
 def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     """Convert Python type annotation to a JSON Schema for a parameter.
@@ -295,7 +298,7 @@ def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> dict
         "function": raw_tool_def,
     }
 
-def prepare_tools(tools: list[ToolFn | ToolDef | RawToolDef]) -> list[dict]:
+def prepare_tools(tools: list[ToolLike]) -> list[dict]:
     tool_defs = []
     for tool in tools:
         if callable(tool):

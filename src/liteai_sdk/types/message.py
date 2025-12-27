@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import json
 import dataclasses
 from abc import ABC, abstractmethod
-from typing import Any, Literal, cast
-from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
+from typing import TYPE_CHECKING, Any, Literal, cast
+from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
                                 ChatCompletionAudioResponse,\
@@ -19,6 +21,11 @@ from litellm.types.llms.openai import (
     ChatCompletionToolMessage,
     ChatCompletionSystemMessage,
 )
+from ..tool import ToolLike
+from ..tool.utils import find_tool_by_name
+
+if TYPE_CHECKING:
+    from . import LlmRequestParams
 
 class ChatMessage(BaseModel, ABC):    
     model_config = ConfigDict(
@@ -37,9 +44,14 @@ class UserMessage(ChatMessage):
         return ChatCompletionUserMessage(role=self.role, content=self.content)
 
 class ToolMessage(ChatMessage):
+    """
+    The `tool_def` field is ref to the target tool of the tool call, and 
+    it will only be None when the target tool is not found
+    """
     id: str
     name: str
     arguments: str
+    tool_def: ToolLike | None
     result: str | None = None
     error: str | None = None
     role: Literal["tool"] = "tool"
@@ -75,8 +87,10 @@ class AssistantMessage(ChatMessage):
     images: list[ChatCompletionImageURL] | None = None
     role: Literal["assistant"] = "assistant"
 
+    _request_params_ref: LlmRequestParams = PrivateAttr()
+
     @classmethod
-    def from_litellm_message(cls, message: LiteLlmMessage) -> "AssistantMessage":
+    def from_litellm_message(cls, request_params: LlmRequestParams, message: LiteLlmMessage) -> "AssistantMessage":
         tool_calls: list[ChatCompletionAssistantToolCall] | None = None
         if (message_tool_calls := message.get("tool_calls")) is not None:
             tool_calls = [ChatCompletionAssistantToolCall(
@@ -93,7 +107,8 @@ class AssistantMessage(ChatMessage):
             reasoning_content=message.get("reasoning_content"),
             tool_calls=tool_calls,
             audio=message.get("audio"),
-            images=message.get("images")
+            images=message.get("images"),
+            _request_params_ref=request_params,
         )
 
     def to_litellm_message(self) -> ChatCompletionAssistantMessage:
@@ -125,15 +140,21 @@ class AssistantMessage(ChatMessage):
         it only contains the tool call id, name and arguments.
         Returns None if there is no tool call in the assistant message.
         """
-        results = []
+        if not hasattr(self, "_request_params_ref") or\
+           self._request_params_ref.tools is None:
+            return None
+
         parsed_tool_calls = self.parse_tool_calls()
         if parsed_tool_calls is None: return None
 
+        results = []
         for tool_call in parsed_tool_calls:
             id, name, arguments = tool_call
+            target_tool = find_tool_by_name(self._request_params_ref.tools, name)
             results.append(ToolMessage(
                 id=id,
                 name=name,
+                tool_def=target_tool,
                 arguments=arguments,
                 result=None,
                 error=None,

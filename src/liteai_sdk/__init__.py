@@ -24,18 +24,22 @@ from litellm.types.utils import LlmProviders,\
 from .debug import enable_debugging
 from .param_parser import ParamParser
 from .stream import AssistantMessageCollector
-from .tool import ToolFn, ToolDef, RawToolDef
+from .tool import ToolFn, ToolDef, RawToolDef, ToolLike
 from .tool.execute import execute_tool_sync, execute_tool
-from .tool.utils import filter_executable_tools, find_tool_by_name
+from .tool.utils import find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.exceptions import *
 from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
                            MessageChunk, TextChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
                            ToolCallTuple, openai_chunk_normalizer
+from .logger import logger, enable_logging
 
 class LLM:
     """
-    The `stream_text` API will returns ToolMessage in the queue only if `params.execute_tools` is True.
+    The `generate_text` and `stream_text` API will returns completed ToolMessage in the returned sequence
+    only if `params.execute_tools` is True.
+
+    - - -
 
     Possible exceptions raises for `generate_text` and `stream_text`:
         - AuthenticationError
@@ -47,7 +51,6 @@ class LLM:
         - InternalServerError
         - ServiceUnavailableError
         - ContentPolicyViolationError
-
         - APIError
         - Timeout
     """
@@ -65,7 +68,7 @@ class LLM:
     def _should_resolve_tool_calls(
             params: LlmRequestParams,
             message: AssistantMessage,
-            ) -> tuple[list[ToolFn | ToolDef | RawToolDef],
+            ) -> tuple[list[ToolLike],
                        list[ToolCallTuple]] | None:
         parsed_tool_calls = message.parse_tool_calls()
         condition = params.execute_tools and\
@@ -79,16 +82,20 @@ class LLM:
 
     @staticmethod
     async def _execute_tool_calls(
-        tools: list[ToolFn | ToolDef | RawToolDef],
+        tools: list[ToolLike],
         tool_call_tuples: list[ToolCallTuple]
         ) -> list[ToolMessage]:
-        executable_tools = filter_executable_tools(tools)
         results = []
         for tool_call_tuple in tool_call_tuples:
             id, function_name, function_arguments = tool_call_tuple
-            if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
-            result, error = None, None
+            if (target_tool := find_tool_by_name(tools, function_name)) is None:
+                logger.warning(f"Tool \"{function_name}\" not found, skipping execution.")
+                continue
+            if isinstance(target_tool, dict):
+                logger.warning(f"Tool \"{function_name}\" is a raw tool, skipping execution.")
+                continue
 
+            result, error = None, None
             try:
                 result = await execute_tool(target_tool, function_arguments)
             except Exception as e:
@@ -97,20 +104,25 @@ class LLM:
                 id=id,
                 name=function_name,
                 arguments=function_arguments,
+                tool_def=target_tool,
                 result=result,
                 error=error))
         return results
 
     @staticmethod
     def _execute_tool_calls_sync(
-        tools: list[ToolFn | ToolDef | RawToolDef],
+        tools: list[ToolLike],
         tool_call_tuples: list[ToolCallTuple]
         ) -> list[ToolMessage]:
-        executable_tools = filter_executable_tools(tools)
         results = []
         for tool_call_tuple in tool_call_tuples:
             id, function_name, function_arguments = tool_call_tuple
-            if (target_tool := find_tool_by_name(cast(list, executable_tools), function_name)) is None: continue
+            if (target_tool := find_tool_by_name(tools, function_name)) is None:
+                logger.warning(f"Tool \"{function_name}\" not found, skipping execution.")
+                continue
+            if isinstance(target_tool, dict):
+                logger.warning(f"Tool \"{function_name}\" is a raw tool, skipping execution.")
+                continue
 
             result, error = None, None
             try:
@@ -121,6 +133,7 @@ class LLM:
                 id=id,
                 name=function_name,
                 arguments=function_arguments,
+                tool_def=target_tool,
                 result=result,
                 error=error))
         return results
@@ -137,7 +150,7 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         message = choices[0].message
-        assistant_message = AssistantMessage.from_litellm_message(message)
+        assistant_message = AssistantMessage.from_litellm_message(params, message)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
@@ -149,7 +162,7 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         message = choices[0].message
-        assistant_message = AssistantMessage.from_litellm_message(message)
+        assistant_message = AssistantMessage.from_litellm_message(params, message)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
@@ -217,13 +230,12 @@ __all__ = [
     "APIError",
     "Timeout",
 
-    "enable_debugging",
-
     "LLM",
     "LlmRequestParams",
     "ToolFn",
     "ToolDef",
     "RawToolDef",
+    "ToolLike",
 
     "ChatMessage",
     "UserMessage",
@@ -240,5 +252,8 @@ __all__ = [
 
     "GenerateTextResponse",
     "StreamTextResponseSync",
-    "StreamTextResponseAsync"
+    "StreamTextResponseAsync",
+
+    "enable_debugging",
+    "enable_logging",
 ]
