@@ -682,29 +682,10 @@ import json
 
 class TestToolExecution:
     # ------------------------------------------------------------------------
-    # 4.1 _parse_arguments tests
+    # 4.1 _arguments_normalizer tests (via execute_tool_sync)
     # ------------------------------------------------------------------------
-
-    def test_parse_arguments_simple(self):
-        from liteai_sdk.tool.execute import parse_arguments
-
-        arguments = '{"name": "Alice", "age": 30}'
-        result = parse_arguments(arguments)
-        assert result == {"name": "Alice", "age": 30}
-
-    def test_parse_arguments_nested(self):
-        from liteai_sdk.tool.execute import parse_arguments
-
-        arguments = '{"user": {"name": "Bob", "roles": ["admin", "user"]}, "count": 5}'
-        result = parse_arguments(arguments)
-        assert result == {"user": {"name": "Bob", "roles": ["admin", "user"]}, "count": 5}
-
-    def test_parse_arguments_empty(self):
-        from liteai_sdk.tool.execute import parse_arguments
-
-        arguments = '{}'
-        result = parse_arguments(arguments)
-        assert result == {}
+    # Note: _arguments_normalizer is a private function, so we test it indirectly
+    # through execute_tool_sync which uses it internally
 
     # ------------------------------------------------------------------------
     # 4.2 execute_tool_sync with regular functions
@@ -718,7 +699,8 @@ class TestToolExecution:
             return a + b
 
         result = execute_tool_sync(add, '{"a": 5, "b": 3}')
-        assert result == 8
+        assert result == "8"
+        assert json.loads(result) == 8
 
     def test_execute_tool_sync_function_with_string(self):
         from liteai_sdk.tool.execute import execute_tool_sync
@@ -728,6 +710,7 @@ class TestToolExecution:
             return f"Hello, {name}!"
 
         result = execute_tool_sync(greet, '{"name": "Alice"}')
+        # String results should pass through unchanged
         assert result == "Hello, Alice!"
 
     def test_execute_tool_sync_function_with_dict(self):
@@ -738,7 +721,8 @@ class TestToolExecution:
             return len(data)
 
         result = execute_tool_sync(process, '{"data": {"a": 1, "b": 2, "c": 3}}')
-        assert result == 3
+        assert result == "3"
+        assert json.loads(result) == 3
 
     # ------------------------------------------------------------------------
     # 4.3 execute_tool_sync with async functions
@@ -753,7 +737,8 @@ class TestToolExecution:
             return x * y
 
         result = execute_tool_sync(async_multiply, '{"x": 4, "y": 7}')
-        assert result == 28
+        assert result == "28"
+        assert json.loads(result) == 28
 
     def test_execute_tool_sync_async_function_with_string(self):
         from liteai_sdk.tool.execute import execute_tool_sync
@@ -764,6 +749,7 @@ class TestToolExecution:
             return text.upper()
 
         result = execute_tool_sync(async_upper, '{"text": "hello"}')
+        # String results should pass through unchanged
         assert result == "HELLO"
 
     # ------------------------------------------------------------------------
@@ -784,6 +770,7 @@ class TestToolExecution:
         )
 
         result = execute_tool_sync(tool_def, '{"a": "Hello", "b": " World"}')
+        # String results should pass through unchanged
         assert result == "Hello World"
 
     def test_execute_tool_sync_tooldef_async(self):
@@ -801,7 +788,8 @@ class TestToolExecution:
         )
 
         result = execute_tool_sync(tool_def, '{"x": 10, "y": 3}')
-        assert result == 7
+        assert result == "7"
+        assert json.loads(result) == 7
 
     # ------------------------------------------------------------------------
     # 4.5 execute_tool (async) with regular functions
@@ -816,7 +804,8 @@ class TestToolExecution:
             return a / b
 
         result = await execute_tool(divide, '{"a": 10, "b": 2}')
-        assert result == 5.0
+        assert result == "5.0"
+        assert json.loads(result) == 5.0
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_function_with_list(self):
@@ -827,7 +816,8 @@ class TestToolExecution:
             return sum(numbers)
 
         result = await execute_tool(sum_list, '{"numbers": [1, 2, 3, 4, 5]}')
-        assert result == 15
+        assert result == "15"
+        assert json.loads(result) == 15
 
     # ------------------------------------------------------------------------
     # 4.6 execute_tool (async) with async functions
@@ -843,7 +833,8 @@ class TestToolExecution:
             return base ** exp
 
         result = await execute_tool(async_power, '{"base": 2, "exp": 10}')
-        assert result == 1024
+        assert result == "1024"
+        assert json.loads(result) == 1024
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_async_function_complex(self):
@@ -855,7 +846,8 @@ class TestToolExecution:
             return [prefix + item for item in items]
 
         result = await execute_tool(async_process, '{"items": ["a", "b", "c"], "prefix": "x_"}')
-        assert result == ["x_a", "x_b", "x_c"]
+        assert isinstance(result, str)
+        assert json.loads(result) == ["x_a", "x_b", "x_c"]
 
     # ------------------------------------------------------------------------
     # 4.7 execute_tool (async) with ToolDef
@@ -876,7 +868,8 @@ class TestToolExecution:
         )
 
         result = await execute_tool(tool_def, '{"n": 21}')
-        assert result == 42
+        assert result == "42"
+        assert json.loads(result) == 42
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_tooldef_async(self):
@@ -894,6 +887,7 @@ class TestToolExecution:
         )
 
         result = await execute_tool(tool_def, '{"text": "hello"}')
+        # String results should pass through unchanged
         assert result == "olleh"
 
     # ------------------------------------------------------------------------
@@ -930,6 +924,222 @@ class TestToolExecution:
 
         with pytest.raises(json.JSONDecodeError):
             await execute_tool(dummy, 'not valid json')
+
+# ============================================================================
+# Test Suite 5: Arguments Normalization
+# ============================================================================
+
+class TestArgumentsNormalizer:
+    """Test the _arguments_normalizer function that parses tool arguments"""
+    
+    def test_arguments_normalizer_string_to_dict(self):
+        """JSON string should be parsed to dictionary"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        result = _arguments_normalizer('{"name": "Alice", "age": 30}')
+        assert result == {"name": "Alice", "age": 30}
+        assert isinstance(result, dict)
+    
+    def test_arguments_normalizer_dict_passthrough(self):
+        """Dictionary should pass through unchanged"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        input_dict = {"key": "value", "count": 42}
+        result = _arguments_normalizer(input_dict)
+        assert result == input_dict
+        assert result is input_dict  # Should be the same object
+    
+    def test_arguments_normalizer_empty_string(self):
+        """Empty JSON object string should parse to empty dict"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        result = _arguments_normalizer('{}')
+        assert result == {}
+    
+    def test_arguments_normalizer_empty_dict(self):
+        """Empty dict should pass through"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        result = _arguments_normalizer({})
+        assert result == {}
+    
+    def test_arguments_normalizer_nested_structure(self):
+        """Nested JSON structures should be parsed correctly"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        json_str = '{"user": {"name": "Bob", "roles": ["admin", "user"]}, "count": 5}'
+        result = _arguments_normalizer(json_str)
+        assert result == {
+            "user": {"name": "Bob", "roles": ["admin", "user"]},
+            "count": 5
+        }
+    
+    def test_arguments_normalizer_chinese_characters_from_string(self):
+        """Chinese characters in JSON string should be parsed correctly"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        # JSON with Chinese characters
+        result = _arguments_normalizer('{"message": "你好", "name": "张三"}')
+        assert result == {"message": "你好", "name": "张三"}
+        
+        # JSON with Unicode escapes
+        result = _arguments_normalizer('{"message": "\\u4f60\\u597d"}')
+        assert result == {"message": "你好"}
+        
+    def test_arguments_normalizer_chinese_characters_from_dict(self):
+        """Chinese characters in dict should pass through correctly"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        input_dict = {"message": "你好世界", "user": "李四"}
+        result = _arguments_normalizer(input_dict)
+        assert result == input_dict
+    
+    def test_arguments_normalizer_various_types(self):
+        """Various JSON types should be preserved"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        json_str = '''
+        {
+            "string": "text",
+            "number": 42,
+            "float": 3.14,
+            "boolean": true,
+            "null": null,
+            "array": [1, 2, 3],
+            "object": {"nested": "value"}
+        }
+        '''
+        result = _arguments_normalizer(json_str)
+        assert result["string"] == "text"
+        assert result["number"] == 42
+        assert result["float"] == 3.14
+        assert result["boolean"] is True
+        assert result["null"] is None
+        assert result["array"] == [1, 2, 3]
+        assert result["object"] == {"nested": "value"}
+    
+    def test_arguments_normalizer_invalid_json(self):
+        """Invalid JSON string should raise JSONDecodeError"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        with pytest.raises(json.JSONDecodeError):
+            _arguments_normalizer('invalid json')
+        
+        with pytest.raises(json.JSONDecodeError):
+            _arguments_normalizer('{incomplete')
+    
+    def test_arguments_normalizer_invalid_type(self):
+        """Invalid argument type should raise ValueError"""
+        from liteai_sdk.tool.execute import _arguments_normalizer
+        
+        with pytest.raises(ValueError, match="Invalid arguments type"):
+            _arguments_normalizer(123)  # type: ignore
+        
+        with pytest.raises(ValueError, match="Invalid arguments type"):
+            _arguments_normalizer([1, 2, 3])  # type: ignore
+        
+        with pytest.raises(ValueError, match="Invalid arguments type"):
+            _arguments_normalizer(None)  # type: ignore
+
+# ============================================================================
+# Test Suite 6: Result Normalization
+# ============================================================================
+
+class TestResultNormalizer:
+    """Test the _result_normalizer function that ensures all tool results are strings"""
+    
+    def test_result_normalizer_string_passthrough(self):
+        """String results should pass through unchanged"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        assert _result_normalizer("hello") == "hello"
+        assert _result_normalizer("") == ""
+        assert _result_normalizer("Hello, World!") == "Hello, World!"
+    
+    def test_result_normalizer_number_serialization(self):
+        """Numbers should be converted to string representation"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        assert _result_normalizer(42) == "42"
+        assert _result_normalizer(3.14) == "3.14"
+        assert _result_normalizer(0) == "0"
+        assert _result_normalizer(-100) == "-100"
+    
+    def test_result_normalizer_boolean_serialization(self):
+        """Booleans should be converted to JSON boolean strings"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        assert _result_normalizer(True) == "true"
+        assert _result_normalizer(False) == "false"
+    
+    def test_result_normalizer_none_serialization(self):
+        """None should be converted to JSON null"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        assert _result_normalizer(None) == "null"
+    
+    def test_result_normalizer_dict_serialization(self):
+        """Dictionaries should be serialized to JSON"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        result = _result_normalizer({"key": "value"})
+        assert result == '{"key": "value"}'
+        assert json.loads(result) == {"key": "value"}
+        
+        result = _result_normalizer({"a": 1, "b": 2})
+        parsed = json.loads(result)
+        assert parsed == {"a": 1, "b": 2}
+    
+    def test_result_normalizer_list_serialization(self):
+        """Lists should be serialized to JSON"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        result = _result_normalizer([1, 2, 3])
+        assert result == "[1, 2, 3]"
+        assert json.loads(result) == [1, 2, 3]
+        
+        result = _result_normalizer(["a", "b", "c"])
+        assert json.loads(result) == ["a", "b", "c"]
+    
+    def test_result_normalizer_chinese_characters(self):
+        """Chinese characters should be preserved (ensure_ascii=False)"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        # String passthrough
+        assert _result_normalizer("你好世界") == "你好世界"
+        
+        # Dict with Chinese
+        result = _result_normalizer({"message": "你好", "name": "张三"})
+        assert "你好" in result
+        assert "张三" in result
+        parsed = json.loads(result)
+        assert parsed["message"] == "你好"
+        assert parsed["name"] == "张三"
+    
+    def test_result_normalizer_nested_structures(self):
+        """Nested data structures should be properly serialized"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        data = {
+            "user": {
+                "name": "Alice",
+                "age": 30,
+                "roles": ["admin", "user"]
+            },
+            "active": True,
+            "count": 5
+        }
+        result = _result_normalizer(data)
+        parsed = json.loads(result)
+        assert parsed == data
+    
+    def test_result_normalizer_empty_collections(self):
+        """Empty collections should be serialized correctly"""
+        from liteai_sdk.tool.execute import _result_normalizer
+        
+        assert _result_normalizer([]) == "[]"
+        assert _result_normalizer({}) == "{}"
+        assert _result_normalizer(tuple()) == "[]"
 
 # ============================================================================
 # Fixtures and Helper Functions

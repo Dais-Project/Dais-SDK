@@ -17,40 +17,45 @@ def _arguments_normalizer(arguments: str | dict) -> dict:
     else:
         raise ValueError(f"Invalid arguments type: {type(arguments)}")
 
+def _result_normalizer(result: Any) -> str:
+    if isinstance(result, str):
+        return result
+    return json.dumps(result, ensure_ascii=False)
+
 @singledispatch
-def execute_tool_sync(tool, arguments: str | dict) -> Any: pass
+def execute_tool_sync(tool, arguments: str | dict) -> str: ...
 
 @execute_tool_sync.register(FunctionType)
-def _(toolfn: Callable, arguments: str | dict) -> Any:
+def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    if asyncio.iscoroutinefunction(toolfn):
-        return asyncio.run(
-            _coroutine_wrapper(
-                toolfn(**arguments)))
-    return toolfn(**arguments)
+    result = asyncio.run(_coroutine_wrapper(toolfn(**arguments)))\
+             if asyncio.iscoroutinefunction(toolfn)\
+             else toolfn(**arguments)
+    return _result_normalizer(result)
 
 @execute_tool_sync.register(ToolDef)
-def _(tooldef: ToolDef, arguments: str | dict) -> Any:
+def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    if asyncio.iscoroutinefunction(tooldef.execute):
-        return asyncio.run(
-            _coroutine_wrapper(
-                tooldef.execute(**arguments)))
-    return tooldef.execute(**arguments)
+    result = asyncio.run(_coroutine_wrapper(tooldef.execute(**arguments)))\
+             if asyncio.iscoroutinefunction(tooldef.execute)\
+             else tooldef.execute(**arguments)
+    return _result_normalizer(result)
 
 @singledispatch
-async def execute_tool(tool, arguments: str | dict) -> Any: pass
+async def execute_tool(tool, arguments: str | dict) -> str: ...
 
 @execute_tool.register(FunctionType)
-async def _(toolfn: Callable, arguments: str | dict) -> Any:
+async def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    if asyncio.iscoroutinefunction(toolfn):
-        return await toolfn(**arguments)
-    return toolfn(**arguments)
+    result = await toolfn(**arguments)\
+             if asyncio.iscoroutinefunction(toolfn)\
+             else toolfn(**arguments)
+    return _result_normalizer(result)
 
 @execute_tool.register(ToolDef)
-async def _(tooldef: ToolDef, arguments: str | dict) -> Any:
+async def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    if asyncio.iscoroutinefunction(tooldef.execute):
-        return await tooldef.execute(**arguments)
-    return tooldef.execute(**arguments)
+    result = await tooldef.execute(**arguments)\
+             if asyncio.iscoroutinefunction(tooldef.execute)\
+             else tooldef.execute(**arguments)
+    return _result_normalizer(result)
