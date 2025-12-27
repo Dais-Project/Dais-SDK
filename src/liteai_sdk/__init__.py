@@ -232,10 +232,13 @@ __all__ = [
 
     "LLM",
     "LlmRequestParams",
+
     "ToolFn",
     "ToolDef",
     "RawToolDef",
     "ToolLike",
+    "execute_tool",
+    "execute_tool_sync",
 
     "ChatMessage",
     "UserMessage",
