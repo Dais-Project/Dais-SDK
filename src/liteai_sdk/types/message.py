@@ -51,16 +51,21 @@ class ToolMessage(ChatMessage):
     id: str
     name: str
     arguments: str
-    tool_def: ToolLike | None
     result: str | None = None
     error: str | None = None
     role: Literal["tool"] = "tool"
+
+    tool_def: ToolLike | None = PrivateAttr(default=None)
 
     @field_validator("result", mode="before")
     def validate_result(cls, v: Any) -> Any:
         if v is None: return v
         if isinstance(v, str): return v
         return json.dumps(v, ensure_ascii=False)
+
+    def with_tool_def(self, tool_def: ToolLike) -> "ToolMessage":
+        self.tool_def = tool_def
+        return self
 
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         if self.result is None and self.error is None:
@@ -151,7 +156,7 @@ class AssistantMessage(ChatMessage):
         for tool_call in parsed_tool_calls:
             id, name, arguments = tool_call
             target_tool = find_tool_by_name(self._request_params_ref.tools, name)
-            results.append(ToolMessage(
+            results.append(ToolMessage.model_construct(
                 id=id,
                 name=name,
                 tool_def=target_tool,

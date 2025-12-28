@@ -104,9 +104,8 @@ class LLM:
                 id=id,
                 name=function_name,
                 arguments=function_arguments,
-                tool_def=target_tool,
                 result=result,
-                error=error))
+                error=error).with_tool_def(target_tool))
         return results
 
     @staticmethod
@@ -133,9 +132,8 @@ class LLM:
                 id=id,
                 name=function_name,
                 arguments=function_arguments,
-                tool_def=target_tool,
                 result=result,
-                error=error))
+                error=error).with_tool_def(target_tool))
         return results
 
     def list_models(self) -> list[str]:
