@@ -148,7 +148,9 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         message = choices[0].message
-        assistant_message = AssistantMessage.from_litellm_message(params, message)
+        assistant_message = AssistantMessage\
+                            .from_litellm_message(message)\
+                            .with_request_params(params)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
@@ -160,7 +162,9 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
         message = choices[0].message
-        assistant_message = AssistantMessage.from_litellm_message(params, message)
+        assistant_message = AssistantMessage\
+                            .from_litellm_message(message)\
+                            .with_request_params(params)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
             tools, tool_calls = tools_and_tool_calls
@@ -175,7 +179,7 @@ class LLM:
                 yield from openai_chunk_normalizer(chunk)
                 message_collector.collect(chunk)
 
-            message = message_collector.get_message()
+            message = message_collector.get_message().with_request_params(params)
             full_message_queue.put(message)
             if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
                 tools, tool_calls = tools_and_tool_calls
@@ -199,7 +203,7 @@ class LLM:
                     yield normalized_chunk
                 message_collector.collect(chunk)
 
-            message = message_collector.get_message()
+            message = message_collector.get_message().with_request_params(params)
             await full_message_queue.put(message)
             if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
                 tools, tool_calls = tools_and_tool_calls
