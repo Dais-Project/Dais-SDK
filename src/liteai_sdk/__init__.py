@@ -36,7 +36,7 @@ from .logger import logger, enable_logging
 
 class LLM:
     """
-    The `generate_text` and `stream_text` API will returns completed ToolMessage in the returned sequence
+    The `generate_text` and `stream_text` API will return ToolMessage in the returned sequence
     only if `params.execute_tools` is True.
 
     - - -
