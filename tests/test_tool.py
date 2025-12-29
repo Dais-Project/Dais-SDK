@@ -2,7 +2,7 @@ import dataclasses
 import enum
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time
-from typing import Annotated, Any, Literal, Optional, Union, get_args, get_origin
+from typing import Annotated, Any, Literal, Optional, Union
 
 import pytest
 from pydantic import BaseModel as PydanticBaseModel
@@ -924,6 +924,187 @@ class TestToolExecution:
 
         with pytest.raises(json.JSONDecodeError):
             await execute_tool(dummy, 'not valid json')
+
+    # ------------------------------------------------------------------------
+    # 4.9 class method tests
+    # ------------------------------------------------------------------------
+
+    def test_execute_tool_sync_instance_method(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        class Calculator:
+            def multiply(self, x: int, y: int) -> int:
+                """Multiply two numbers"""
+                return x * y
+
+        calc = Calculator()
+        result = execute_tool_sync(calc.multiply, '{"x": 6, "y": 7}')
+        assert result == "42"
+        assert json.loads(result) == 42
+
+    def test_execute_tool_sync_classmethod(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        class MathUtils:
+            @classmethod
+            def power(cls, base: int, exp: int) -> int:
+                """Calculate power"""
+                return base ** exp
+
+        result = execute_tool_sync(MathUtils.power, '{"base": 2, "exp": 8}')
+        assert result == "256"
+        assert json.loads(result) == 256
+
+    def test_execute_tool_sync_staticmethod(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        class StringUtils:
+            @staticmethod
+            def reverse(text: str) -> str:
+                """Reverse a string"""
+                return text[::-1]
+
+        result = execute_tool_sync(StringUtils.reverse, '{"text": "hello"}')
+        assert result == "olleh"
+
+    def test_execute_tool_sync_async_instance_method(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        class AsyncCalculator:
+            async def add(self, a: int, b: int) -> int:
+                """Async add"""
+                await asyncio.sleep(0.01)
+                return a + b
+
+        calc = AsyncCalculator()
+        result = execute_tool_sync(calc.add, '{"a": 10, "b": 15}')
+        assert result == "25"
+        assert json.loads(result) == 25
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_instance_method(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        class Calculator:
+            def subtract(self, x: int, y: int) -> int:
+                """Subtract two numbers"""
+                return x - y
+
+        calc = Calculator()
+        result = await execute_tool(calc.subtract, '{"x": 20, "y": 8}')
+        assert result == "12"
+        assert json.loads(result) == 12
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_classmethod(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        class MathUtils:
+            @classmethod
+            def multiply(cls, a: int, b: int) -> int:
+                """Multiply numbers"""
+                return a * b
+
+        result = await execute_tool(MathUtils.multiply, '{"a": 9, "b": 6}')
+        assert result == "54"
+        assert json.loads(result) == 54
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_staticmethod(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        class StringUtils:
+            @staticmethod
+            def uppercase(text: str) -> str:
+                """Convert to uppercase"""
+                return text.upper()
+
+        result = await execute_tool(StringUtils.uppercase, '{"text": "world"}')
+        assert result == "WORLD"
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_async_instance_method(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        class AsyncCalculator:
+            async def divide(self, x: float, y: float) -> float:
+                """Async divide"""
+                await asyncio.sleep(0.01)
+                return x / y
+
+        calc = AsyncCalculator()
+        result = await execute_tool(calc.divide, '{"x": 100, "y": 4}')
+        assert result == "25.0"
+        assert json.loads(result) == 25.0
+
+    # ------------------------------------------------------------------------
+    # 4.10 invalid tool type error tests
+    # ------------------------------------------------------------------------
+
+    def test_execute_tool_sync_invalid_type_int(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            execute_tool_sync(123, '{"x": 1}')  # type: ignore
+
+    def test_execute_tool_sync_invalid_type_string(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            execute_tool_sync("not a function", '{"x": 1}')  # type: ignore
+
+    def test_execute_tool_sync_invalid_type_list(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            execute_tool_sync([1, 2, 3], '{"x": 1}')  # type: ignore
+
+    def test_execute_tool_sync_invalid_type_dict(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            execute_tool_sync({"key": "value"}, '{"x": 1}')  # type: ignore
+
+    def test_execute_tool_sync_invalid_type_none(self):
+        from liteai_sdk.tool.execute import execute_tool_sync
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            execute_tool_sync(None, '{"x": 1}')  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_invalid_type_int(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            await execute_tool(456, '{"x": 1}')  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_invalid_type_string(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            await execute_tool("invalid", '{"x": 1}')  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_invalid_type_list(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            await execute_tool([4, 5, 6], '{"x": 1}')  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_invalid_type_dict(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            await execute_tool({"foo": "bar"}, '{"x": 1}')  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_async_invalid_type_none(self):
+        from liteai_sdk.tool.execute import execute_tool
+
+        with pytest.raises(ValueError, match="Invalid tool type"):
+            await execute_tool(None, '{"x": 1}')  # type: ignore
 
 # ============================================================================
 # Test Suite 5: Arguments Normalization

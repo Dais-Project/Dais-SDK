@@ -2,7 +2,7 @@ import asyncio
 import json
 from functools import singledispatch
 from typing import Any, Awaitable, Callable, cast
-from types import FunctionType, CoroutineType
+from types import FunctionType, MethodType, CoroutineType
 from . import ToolDef
 
 async def _coroutine_wrapper(awaitable: Awaitable[Any]) -> CoroutineType:
@@ -23,9 +23,11 @@ def _result_normalizer(result: Any) -> str:
     return json.dumps(result, ensure_ascii=False)
 
 @singledispatch
-def execute_tool_sync(tool, arguments: str | dict) -> str: ...
+def execute_tool_sync(tool, arguments: str | dict) -> str:
+    raise ValueError(f"Invalid tool type: {type(tool)}")
 
 @execute_tool_sync.register(FunctionType)
+@execute_tool_sync.register(MethodType)
 def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = asyncio.run(_coroutine_wrapper(toolfn(**arguments)))\
@@ -42,9 +44,11 @@ def _(tooldef: ToolDef, arguments: str | dict) -> str:
     return _result_normalizer(result)
 
 @singledispatch
-async def execute_tool(tool, arguments: str | dict) -> str: ...
+async def execute_tool(tool, arguments: str | dict) -> str:
+    raise ValueError(f"Invalid tool type: {type(tool)}")
 
 @execute_tool.register(FunctionType)
+@execute_tool.register(MethodType)
 async def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = await toolfn(**arguments)\
