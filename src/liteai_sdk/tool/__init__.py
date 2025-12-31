@@ -259,7 +259,7 @@ def generate_tool_definition_from_callable(func: ToolFn) -> dict[str, Any]:
         "type": "function",
         "function": {
             "name": func.__name__,
-            "description": func.__doc__.strip(),
+            "description": inspect.cleandoc(func.__doc__),
             "parameters": {"type": "object", "properties": properties, "required": required},
         },
     }
