@@ -6,10 +6,13 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, cast
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
 from litellm.types.utils import Message as LiteLlmMessage,\
+                                ModelResponse as LiteLlmModelResponse,\
                                 ModelResponseStream as LiteLlmModelResponseStream,\
+                                Choices as LiteLlmModelResponseChoices,\
                                 ChatCompletionAudioResponse,\
                                 ChatCompletionMessageToolCall,\
-                                ChatCompletionDeltaToolCall
+                                ChatCompletionDeltaToolCall,\
+                                Usage as LiteLlmUsage
 from litellm.types.llms.openai import (
     AllMessageValues,
     OpenAIMessageContent,
@@ -95,12 +98,16 @@ class AssistantMessage(ChatMessage):
     tool_calls: list[ChatCompletionAssistantToolCall] | None = None
     audio: ChatCompletionAudioResponse | None = None
     images: list[ChatCompletionImageURL] | None = None
+    usage: LiteLlmUsage | None = None
     role: Literal["assistant"] = "assistant"
 
     _request_params_ref: LlmRequestParams | None = PrivateAttr(default=None)
 
     @classmethod
-    def from_litellm_message(cls, message: LiteLlmMessage) -> "AssistantMessage":
+    def from_litellm_message(cls, response: LiteLlmModelResponse) -> "AssistantMessage":
+        choices = cast(list[LiteLlmModelResponseChoices], response.choices)
+        message = choices[0].message
+
         tool_calls: list[ChatCompletionAssistantToolCall] | None = None
         if (message_tool_calls := message.get("tool_calls")) is not None:
             tool_calls = [ChatCompletionAssistantToolCall(
@@ -118,6 +125,7 @@ class AssistantMessage(ChatMessage):
             tool_calls=tool_calls,
             audio=message.get("audio"),
             images=message.get("images"),
+            usage=response.get("usage"),
         )
 
     def with_request_params(self, request_params: LlmRequestParams) -> "AssistantMessage":
@@ -197,6 +205,12 @@ class TextChunk:
     content: str
 
 @dataclasses.dataclass
+class UsageChunk:
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+
+@dataclasses.dataclass
 class ReasoningChunk:
     content: str
 
@@ -239,4 +253,10 @@ def openai_chunk_normalizer(
                 tool_call.function.name,
                 tool_call.function.arguments,
                 tool_call.index))
+    if (usage := getattr(chunk, "usage", None)) is not None:
+        usage = cast(LiteLlmUsage, usage)
+        result.append(UsageChunk(
+            input_tokens=usage.prompt_tokens,
+            output_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens))
     return result

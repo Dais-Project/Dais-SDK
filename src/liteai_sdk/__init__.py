@@ -19,8 +19,7 @@ from litellm.exceptions import (
 from litellm.utils import get_valid_models
 from litellm.types.utils import LlmProviders,\
                                 ModelResponse as LiteLlmModelResponse,\
-                                ModelResponseStream as LiteLlmModelResponseStream,\
-                                Choices as LiteLlmModelResponseChoices
+                                ModelResponseStream as LiteLlmModelResponseStream
 from .debug import enable_debugging
 from .param_parser import ParamParser
 from .stream import AssistantMessageCollector
@@ -30,7 +29,7 @@ from .tool.utils import find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.exceptions import *
 from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
-                           MessageChunk, TextChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
+                           MessageChunk, TextChunk, UsageChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
                            ToolCallTuple, openai_chunk_normalizer
 from .logger import logger, enable_logging
 
@@ -146,10 +145,8 @@ class LLM:
     def generate_text_sync(self, params: LlmRequestParams) -> GenerateTextResponse:
         response = completion(**self._param_parser.parse_nonstream(params))
         response = cast(LiteLlmModelResponse, response)
-        choices = cast(list[LiteLlmModelResponseChoices], response.choices)
-        message = choices[0].message
         assistant_message = AssistantMessage\
-                            .from_litellm_message(message)\
+                            .from_litellm_message(response)\
                             .with_request_params(params)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
@@ -160,10 +157,8 @@ class LLM:
     async def generate_text(self, params: LlmRequestParams) -> GenerateTextResponse:
         response = await acompletion(**self._param_parser.parse_nonstream(params))
         response = cast(LiteLlmModelResponse, response)
-        choices = cast(list[LiteLlmModelResponseChoices], response.choices)
-        message = choices[0].message
         assistant_message = AssistantMessage\
-                            .from_litellm_message(message)\
+                            .from_litellm_message(response)\
                             .with_request_params(params)
         result: GenerateTextResponse = [assistant_message]
         if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
@@ -250,6 +245,7 @@ __all__ = [
 
     "MessageChunk",
     "TextChunk",
+    "UsageChunk",
     "ReasoningChunk",
     "AudioChunk",
     "ImageChunk",

@@ -45,4 +45,5 @@ class ParamParser:
     def parse_stream(self, params: LlmRequestParams) -> ParsedParams:
         parsed = self._parse(params)
         parsed["stream"] = True
+        parsed["stream_options"] = {"include_usage": True}
         return parsed
