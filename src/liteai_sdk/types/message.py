@@ -229,7 +229,7 @@ class ToolCallChunk:
     arguments: str
     index: int
 
-MessageChunk = TextChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
+MessageChunk = TextChunk | UsageChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
 
 def openai_chunk_normalizer(
         chunk: LiteLlmModelResponseStream
