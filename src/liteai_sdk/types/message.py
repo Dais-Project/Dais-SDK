@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import dataclasses
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
 from litellm.types.utils import Message as LiteLlmMessage,\
                                 ModelResponse as LiteLlmModelResponse,\
@@ -91,7 +91,11 @@ class ToolMessage(ChatMessage):
             content=content,
             tool_call_id=self.id)
 
-ToolCallTuple = tuple[str, str, str]
+class ToolCallTuple(NamedTuple):
+    id: str
+    function_name: str
+    function_arguments: str
+
 class AssistantMessage(ChatMessage):
     content: str | None = None
     reasoning_content: str | None = None
@@ -151,7 +155,7 @@ class AssistantMessage(ChatMessage):
                function_name is None or\
                function_arguments is None:
                 return None
-            results.append((id, function_name, function_arguments))
+            results.append(ToolCallTuple(id, function_name, function_arguments))
         return results
 
     def get_partial_tool_messages(self) -> list[ToolMessage] | None:
@@ -172,22 +176,20 @@ class AssistantMessage(ChatMessage):
 
         results = []
         for tool_call in parsed_tool_calls:
-            id, name, arguments = tool_call
-
             tool_message = ToolMessage(
-                id=id,
-                name=name,
-                arguments=arguments,
+                id=tool_call.id,
+                name=tool_call.function_name,
+                arguments=tool_call.function_arguments,
                 result=None,
                 error=None)
 
             if has_tool_def:
                 assert self._request_params_ref and self._request_params_ref.tools
-                target_tool = find_tool_by_name(self._request_params_ref.tools, name)
+                target_tool = find_tool_by_name(self._request_params_ref.tools, tool_call.function_name)
                 if target_tool:
                     tool_message = tool_message.with_tool_def(target_tool)
                 else:
-                    logger.warning(f"Tool {name} not found in request params, "
+                    logger.warning(f"Tool {tool_call.function_name} not found in request params, "
                                     "tool_def will not be attached to the tool message")
 
             results.append(tool_message)
