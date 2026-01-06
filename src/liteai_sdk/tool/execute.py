@@ -3,7 +3,7 @@ import json
 from functools import singledispatch
 from typing import Any, Awaitable, Callable, cast
 from types import FunctionType, MethodType, CoroutineType
-from . import ToolDef
+from ..types.tool import ToolDef
 
 async def _coroutine_wrapper(awaitable: Awaitable[Any]) -> CoroutineType:
     return await awaitable

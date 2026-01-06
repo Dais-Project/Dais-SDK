@@ -24,14 +24,14 @@ from litellm.types.llms.openai import (
     ChatCompletionToolMessage,
     ChatCompletionSystemMessage,
 )
-from ..tool import ToolLike
+from ..types.tool import ToolLike
 from ..tool.utils import find_tool_by_name
 from ..logger import logger
 
 if TYPE_CHECKING:
     from . import LlmRequestParams
 
-class ChatMessage(BaseModel, ABC):    
+class ChatMessage(BaseModel, ABC):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -49,7 +49,7 @@ class UserMessage(ChatMessage):
 
 class ToolMessage(ChatMessage):
     """
-    The `tool_def` field is ref to the target tool of the tool call, and 
+    The `tool_def` field is ref to the target tool of the tool call, and
     it will only be None when the target tool is not found
     """
     id: str

@@ -1,4 +1,4 @@
-from . import ToolFn, ToolDef, ToolLike
+from ..types.tool import ToolFn, ToolDef, ToolLike
 
 def find_tool_by_name(tools: list[ToolLike], name: str) -> ToolLike | None:
     for tool in tools:

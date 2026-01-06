@@ -3,7 +3,7 @@ import queue
 from typing import cast
 from collections.abc import AsyncGenerator, Generator
 from litellm import CustomStreamWrapper, completion, acompletion
-from litellm.exceptions import (  
+from litellm.exceptions import (
     AuthenticationError,
     PermissionDeniedError,
     RateLimitError,
@@ -23,10 +23,11 @@ from litellm.types.utils import LlmProviders,\
 from .debug import enable_debugging
 from .param_parser import ParamParser
 from .stream import AssistantMessageCollector
-from .tool import ToolFn, ToolDef, RawToolDef, ToolLike
 from .tool.execute import execute_tool_sync, execute_tool
+from .tool.toolset import tool, Toolset
 from .tool.utils import find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
+from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
 from .types.exceptions import *
 from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
                            MessageChunk, TextChunk, UsageChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
@@ -232,7 +233,11 @@ __all__ = [
     "Timeout",
 
     "LLM",
+    "LlmProviders",
     "LlmRequestParams",
+
+    "tool",
+    "Toolset",
 
     "ToolFn",
     "ToolDef",

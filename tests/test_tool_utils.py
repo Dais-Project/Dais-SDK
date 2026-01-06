@@ -3,7 +3,7 @@ Test suite for tool utility functions in liteai_sdk.tool.utils
 """
 
 import pytest
-from liteai_sdk.tool import ToolDef
+from liteai_sdk.types.tool import ToolDef
 from liteai_sdk.tool.utils import find_tool_by_name
 
 # ============================================================================

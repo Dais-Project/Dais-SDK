@@ -1,9 +1,10 @@
 import asyncio
 import dataclasses
 import queue
-from typing import Any, Generator, Literal
+from typing import Any, Literal
 from collections.abc import AsyncGenerator, Generator
-from ..tool import ToolLike
+from .tool import ToolLike
+from ..tool.toolset import Toolset
 from .message import ChatMessage, AssistantMessage, ToolMessage, MessageChunk
 
 @dataclasses.dataclass
@@ -11,6 +12,7 @@ class LlmRequestParams:
     model: str
     messages: list[ChatMessage]
     tools: list[ToolLike] | None = None
+    toolsets: list[Toolset] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
     execute_tools: bool = False
 
