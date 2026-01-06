@@ -5,14 +5,16 @@ import dataclasses
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
-from litellm.types.utils import Message as LiteLlmMessage,\
-                                ModelResponse as LiteLlmModelResponse,\
-                                ModelResponseStream as LiteLlmModelResponseStream,\
-                                Choices as LiteLlmModelResponseChoices,\
-                                ChatCompletionAudioResponse,\
-                                ChatCompletionMessageToolCall,\
-                                ChatCompletionDeltaToolCall,\
-                                Usage as LiteLlmUsage
+from litellm.types.utils import (
+    Message as LiteLlmMessage,
+    ModelResponse as LiteLlmModelResponse,
+    ModelResponseStream as LiteLlmModelResponseStream,
+    Choices as LiteLlmModelResponseChoices,
+    ChatCompletionAudioResponse,
+    ChatCompletionMessageToolCall,
+    ChatCompletionDeltaToolCall,
+    Usage as LiteLlmUsage
+)
 from litellm.types.llms.openai import (
     AllMessageValues,
     OpenAIMessageContent,
