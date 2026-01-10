@@ -24,7 +24,7 @@ class ParamParser:
             tools = params.tools
         if params.toolsets:
             for toolset in params.toolsets:
-                tools.extend(toolset.get_tool_methods())
+                tools.extend(toolset.get_tools())
         return tools
 
     def _parse(self, params: LlmRequestParams) -> ParsedParams:

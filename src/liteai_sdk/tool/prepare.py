@@ -259,7 +259,8 @@ def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> dict[str, Any]:
         "function": {
             "name": tool_def.name,
             "description": tool_def.description,
-            "parameters": {"type": "object", "properties": properties, "required": required},
+            "parameters": tool_def.parameters or\
+                          {"type": "object", "properties": properties, "required": required},
         },
     }
 

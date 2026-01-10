@@ -17,21 +17,31 @@ from litellm.exceptions import (
     Timeout,
 )
 from litellm.utils import get_valid_models
-from litellm.types.utils import LlmProviders,\
-                                ModelResponse as LiteLlmModelResponse,\
-                                ModelResponseStream as LiteLlmModelResponseStream
+from litellm.types.utils import (
+    LlmProviders,
+    ModelResponse as LiteLlmModelResponse,
+    ModelResponseStream as LiteLlmModelResponseStream
+)
 from .debug import enable_debugging
 from .param_parser import ParamParser
 from .stream import AssistantMessageCollector
 from .tool.execute import execute_tool_sync, execute_tool
-from .tool.toolset import tool, Toolset
+from .tool.toolset import (
+    Toolset,
+    python_tool, PythonToolset,
+    McpToolset,
+    LocalMcpToolset, LocalServerParams,
+    RemoteMcpToolset, RemoteServerParams, OAuthParams,
+)
 from .tool.utils import find_tool_by_name
 from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
 from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
 from .types.exceptions import *
-from .types.message import ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,\
-                           MessageChunk, TextChunk, UsageChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,\
-                           ToolCallTuple, openai_chunk_normalizer
+from .types.message import (
+    ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,
+    MessageChunk, TextChunk, UsageChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,
+    ToolCallTuple, openai_chunk_normalizer
+)
 from .logger import logger, enable_logging
 
 class LLM:
@@ -236,8 +246,15 @@ __all__ = [
     "LlmProviders",
     "LlmRequestParams",
 
-    "tool",
     "Toolset",
+    "python_tool",
+    "PythonToolset",
+    "McpToolset",
+    "LocalMcpToolset",
+    "RemoteMcpToolset",
+    "LocalServerParams",
+    "RemoteServerParams",
+    "OAuthParams",
 
     "ToolFn",
     "ToolDef",

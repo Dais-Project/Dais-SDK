@@ -3,6 +3,7 @@ import dataclasses
 import queue
 from typing import Any, Literal
 from collections.abc import AsyncGenerator, Generator
+
 from .tool import ToolLike
 from ..tool.toolset import Toolset
 from .message import ChatMessage, AssistantMessage, ToolMessage, MessageChunk

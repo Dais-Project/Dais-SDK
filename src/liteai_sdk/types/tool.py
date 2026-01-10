@@ -29,5 +29,6 @@ class ToolDef:
     name: str
     description: str
     execute: ToolFn
+    parameters: dict[str, Any] | None = None
 
 ToolLike = ToolDef | RawToolDef | ToolFn
