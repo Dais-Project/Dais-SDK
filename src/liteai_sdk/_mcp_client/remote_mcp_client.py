@@ -7,7 +7,7 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, ConfigDict
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
@@ -22,6 +22,8 @@ class OAuthParams:
     )
 
 class RemoteServerParams(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     url: str
     bearer_token: str | None = None
     oauth_params: OAuthParams | None = None
