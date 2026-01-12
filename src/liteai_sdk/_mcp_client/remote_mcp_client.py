@@ -7,7 +7,7 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel, Field, ConfigDict
+from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
@@ -16,7 +16,7 @@ from ..logger import logger
 class OAuthParams:
     oauth_scopes: list[str] | None = None
     oauth_timeout: int = 120
-    oauth_token_storage: TokenStorage = Field(
+    oauth_token_storage: SkipValidation[TokenStorage] = Field(
         default_factory=InMemoryTokenStorage,
         exclude=True,
     )
