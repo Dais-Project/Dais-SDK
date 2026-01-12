@@ -1,13 +1,13 @@
 import httpx
 import webbrowser
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from contextlib import AsyncExitStack
 from typing import Any, NamedTuple
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel
+from pydantic import AnyUrl, BaseModel, Field
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
@@ -16,7 +16,10 @@ from ..logger import logger
 class OAuthParams:
     oauth_scopes: list[str] | None = None
     oauth_timeout: int = 120
-    oauth_token_storage: TokenStorage = field(default_factory= InMemoryTokenStorage)
+    oauth_token_storage: TokenStorage = Field(
+        default_factory=InMemoryTokenStorage,
+        exclude=True,
+    )
 
 class RemoteServerParams(BaseModel):
     url: str
@@ -31,12 +34,17 @@ class OAuthContext(NamedTuple):
     server: LocalOAuthServer
 
 class RemoteMcpClient(McpClient):
-    def __init__(self, name: str, params: RemoteServerParams):
+    def __init__(self,
+                 name: str,
+                 params: RemoteServerParams,
+                 storage: TokenStorage | None = None):
         self._name = name
         self._params = params
         self._session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
         self._oauth_context: OAuthContext | None = self._init_oauth()
+        if self._params.oauth_params is not None and storage is not None:
+            self._params.oauth_params.oauth_token_storage = storage
 
     def _init_http_headers(self) -> dict[str, str] | None:
         if self._params.http_headers is None and self._params.bearer_token is None:
