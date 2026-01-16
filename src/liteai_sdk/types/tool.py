@@ -1,6 +1,7 @@
 import dataclasses
 from collections.abc import Callable
 from typing import Any, Awaitable
+from ..logger import logger
 
 ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
@@ -30,5 +31,16 @@ class ToolDef:
     description: str
     execute: ToolFn
     parameters: dict[str, Any] | None = None
+
+    @staticmethod
+    def from_tool_fn(tool_fn: ToolFn) -> "ToolDef":
+        if tool_fn.__doc__ is None:
+            logger.warning(f"Tool function {tool_fn.__name__} has no docstring, "
+                            "which is recommended to be used as the tool description")
+        return ToolDef(
+            name=tool_fn.__name__,
+            description=tool_fn.__doc__ or "",
+            execute=tool_fn,
+        )
 
 ToolLike = ToolDef | RawToolDef | ToolFn

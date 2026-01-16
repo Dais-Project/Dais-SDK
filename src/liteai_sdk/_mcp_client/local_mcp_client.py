@@ -13,6 +13,10 @@ class LocalMcpClient(McpClient):
         self._session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
 
+    @property
+    def name(self) -> str:
+        return self._name
+
     async def connect(self):
         self._exit_stack = AsyncExitStack()
 

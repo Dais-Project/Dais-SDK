@@ -4,20 +4,22 @@ from ..._mcp_client.mcp_client import McpClient, Tool, ToolResult
 from ..._mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
 from ..._mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
 from .toolset import Toolset
-from ...types.tool import ToolDef, ToolLike
+from ...types.tool import ToolDef
+from ...logger import logger
 
 class McpToolset(ABC, Toolset):
     def __init__(self, client: McpClient):
         self._client = client
-        self._tools_cache: list[ToolLike] | None = None
+        self._tools_cache: list[ToolDef] | None = None
 
     def _mcp_tool_to_tool_def(self, mcp_tool: Tool) -> ToolDef:
         async def wrapper(**kwargs) -> str:
             result = await self._client.call_tool(mcp_tool.name, kwargs)
             return self._format_tool_result(result)
 
+        toolset_name = self._client.name
         tool_def = ToolDef(
-            name=mcp_tool.name,
+            name=f"{toolset_name}__{mcp_tool.name}",
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
             parameters=mcp_tool.inputSchema,
             execute=wrapper
@@ -67,20 +69,21 @@ class McpToolset(ABC, Toolset):
 
     async def refresh_tools(self) -> None:
         mcp_tools = await self._client.list_tools()
-        self._tools_cache = [self._mcp_tool_to_tool_def(tool) for tool in mcp_tools]
+        self._tools_cache = [self._mcp_tool_to_tool_def(tool)
+                             for tool in mcp_tools]
 
-    def get_tools(self) -> list[ToolLike]:
+    def get_tools(self) -> list[ToolDef]:
         if self._tools_cache is None:
             raise RuntimeError(f"Not connected to MCP server. Call await {self.__class__.__name__}(...).connect() first")
         return self._tools_cache
 
 
-class LocalMcpToolset(McpToolset):    
+class LocalMcpToolset(McpToolset):
     def __init__(self, name: str, params: LocalServerParams):
         client = LocalMcpClient(name, params)
         super().__init__(client)
 
-class RemoteMcpToolset(McpToolset):    
+class RemoteMcpToolset(McpToolset):
     def __init__(self, name: str, params: RemoteServerParams):
         client = RemoteMcpClient(name, params)
         super().__init__(client)

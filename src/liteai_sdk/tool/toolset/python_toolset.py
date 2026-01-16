@@ -1,7 +1,7 @@
 import inspect
 from typing import Any, Callable, TypeVar
 from .toolset import Toolset
-from ...types.tool import ToolLike
+from ...types.tool import ToolDef
 
 F = TypeVar("F", bound=Callable[..., Any])
 TOOL_FLAG = "__is_tool__"
@@ -11,9 +11,12 @@ def python_tool(func: F) -> F:
     return func
 
 class PythonToolset(Toolset):
-    def get_tools(self) -> list[ToolLike]:
-        return [
-            method
-            for _, method in inspect.getmembers(self, predicate=inspect.ismethod)
-            if getattr(method, TOOL_FLAG, False)
-        ]
+    def get_tools(self) -> list[ToolDef]:
+        toolset_name = self.__class__.__name__
+        result = []
+        for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
+            if not getattr(method, TOOL_FLAG, False): continue
+            tool_def = ToolDef.from_tool_fn(method)
+            tool_def.name = f"{toolset_name}__{tool_def.name}"
+            result.append(tool_def)
+        return result

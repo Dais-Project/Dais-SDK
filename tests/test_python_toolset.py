@@ -7,6 +7,7 @@ import pytest
 from liteai_sdk.tool.toolset import python_tool, PythonToolset
 from liteai_sdk.tool.prepare import prepare_tools
 from liteai_sdk.tool.execute import execute_tool, execute_tool_sync
+from liteai_sdk.types.tool import ToolDef
 
 
 class TestToolsetDecorator:
@@ -94,9 +95,9 @@ class TestToolsetBasic:
         tools = toolset.get_tools()
 
         assert len(tools) == 1
-        # PythonToolset returns methods, which have __name__
-        assert getattr(tools[0], "__name__") == "calculate"
-        assert callable(tools[0])
+        assert isinstance(tools[0], ToolDef)
+        assert tools[0].name == "SingleToolset__calculate"
+        assert callable(tools[0].execute)
 
     # ------------------------------------------------------------------------
     # 1.4 PythonToolset with multiple tools
@@ -128,8 +129,9 @@ class TestToolsetBasic:
         tools = toolset.get_tools()
 
         assert len(tools) == 3
-        tool_names = {getattr(tool, "__name__") for tool in tools}
-        assert tool_names == {"add", "multiply", "subtract"}
+        assert all(isinstance(t, ToolDef) for t in tools)
+        tool_names = {t.name for t in tools}
+        assert tool_names == {"MultiToolset__add", "MultiToolset__multiply", "MultiToolset__subtract"}
 
     # ------------------------------------------------------------------------
     # 1.5 Tool methods are bound methods
@@ -150,9 +152,10 @@ class TestToolsetBasic:
         tools = calc.get_tools()
 
         assert len(tools) == 1
+        assert isinstance(tools[0], ToolDef)
         # Should be able to call without passing self
-        assert callable(tools[0])
-        assert tools[0](50) == 150 # type: ignore
+        assert callable(tools[0].execute)
+        assert tools[0].execute(50) == 150
 
 
 class TestToolsetIntegration:
@@ -185,8 +188,8 @@ class TestToolsetIntegration:
 
         # Check tool names
         names = {t["function"]["name"] for t in prepared}
-        assert "add" in names
-        assert "multiply" in names
+        assert "MathToolset__add" in names
+        assert "MathToolset__multiply" in names
 
     # ------------------------------------------------------------------------
     # 1.7 Mixed tools: functions and PythonToolset methods
@@ -210,7 +213,7 @@ class TestToolsetIntegration:
 
         assert len(prepared) == 2
         names = {t["function"]["name"] for t in prepared}
-        assert names == {"standalone_func", "toolset_method"}
+        assert names == {"standalone_func", "MyToolset__toolset_method"}
 
 
 class TestToolsetWithExecution:
@@ -300,12 +303,12 @@ class TestToolsetAdvanced:
         tools = toolset.get_tools()
 
         # Execute the tool
-        assert callable(tools[0])
-        result1 = tools[0](10) # type: ignore
+        assert isinstance(tools[0], ToolDef)
+        result1 = tools[0].execute(10)
         assert result1 == 50
         assert toolset.call_count == 1
 
-        result2 = tools[0](20) # type: ignore
+        result2 = tools[0].execute(20)
         assert result2 == 100
         assert toolset.call_count == 2
 
@@ -332,8 +335,8 @@ class TestToolsetAdvanced:
         tools = toolset.get_tools()
 
         assert len(tools) == 2
-        tool_names = {getattr(tool, "__name__") for tool in tools}
-        assert tool_names == {"base_method", "derived_method"}
+        tool_names = {t.name for t in tools}
+        assert tool_names == {"DerivedToolset__base_method", "DerivedToolset__derived_method"}
 
     # ------------------------------------------------------------------------
     # 1.13 PythonToolset with complex parameter types
@@ -382,10 +385,10 @@ class TestToolsetAdvanced:
         tools2 = counter2.get_tools()
 
         # Execute on different instances
-        assert callable(tools1[0])
-        assert callable(tools2[0])
-        assert tools1[0](5) == 5 # type: ignore
-        assert tools2[0](5) == 105 # type: ignore
+        assert isinstance(tools1[0], ToolDef)
+        assert isinstance(tools2[0], ToolDef)
+        assert tools1[0].execute(5) == 5
+        assert tools2[0].execute(5) == 105
         assert counter1.value == 5
         assert counter2.value == 105
 
@@ -425,7 +428,7 @@ class TestParamParserWithToolsets:
 
         assert extracted is not None
         assert len(extracted) == 2
-        assert all(callable(tool) for tool in extracted)
+        assert all(isinstance(tool, ToolDef) for tool in extracted)
 
     # ------------------------------------------------------------------------
     # 1.16 ParamParser with both tools and toolsets
@@ -460,9 +463,9 @@ class TestParamParserWithToolsets:
         assert extracted is not None
         assert len(extracted) == 2
         # Check we have both tools
-        tool_names = {getattr(t, '__name__', str(t)) for t in extracted}
+        tool_names = {getattr(t, 'name', getattr(t, '__name__', str(t))) for t in extracted}
         assert 'standalone_tool' in tool_names
-        assert 'toolset_method' in tool_names
+        assert 'MyToolset__toolset_method' in tool_names
 
     # ------------------------------------------------------------------------
     # 1.17 ParamParser with multiple toolsets
@@ -575,9 +578,9 @@ class TestToolsetEdgeCases:
 
         # Both should be included (private methods are still methods)
         # The TOOL_FLAG doesn't distinguish between public/private
-        tool_names = {getattr(tool, "__name__") for tool in tools}
+        tool_names = {t.name for t in tools}
         # This depends on implementation, but typically both would be included
-        assert 'public_method' in tool_names
+        assert 'PrivateToolset__public_method' in tool_names
 
     # ------------------------------------------------------------------------
     # 1.21 Toolset with classmethod/staticmethod
@@ -607,8 +610,8 @@ class TestToolsetEdgeCases:
     # 1.22 Toolset method without docstring
     # ------------------------------------------------------------------------
 
-    def test_toolset_method_without_docstring_fails_prepare(self):
-        """PythonToolset method without docstring should fail when preparing"""
+    def test_toolset_method_without_docstring_allowed(self):
+        """PythonToolset method without docstring should be allowed but have empty description"""
         class NoDocToolset(PythonToolset):
             @python_tool
             def no_doc_method(self, x: int) -> int:
@@ -617,6 +620,10 @@ class TestToolsetEdgeCases:
         toolset = NoDocToolset()
         tools = toolset.get_tools()
 
-        # Should raise ValueError when trying to prepare
-        with pytest.raises(ValueError, match="must have a docstring"):
-            prepare_tools(tools)
+        assert len(tools) == 1
+        assert tools[0].description == ""
+        
+        # prepare_tools should now work because ToolDef has description (even if empty)
+        prepared = prepare_tools(tools)
+        assert len(prepared) == 1
+        assert prepared[0]["function"]["description"] == ""

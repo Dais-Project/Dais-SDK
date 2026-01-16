@@ -10,6 +10,10 @@ class ToolResult(NamedTuple):
     content: list[ToolResultBlock]
 
 class McpClient(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+
     @abstractmethod
     async def connect(self): ...
     @abstractmethod

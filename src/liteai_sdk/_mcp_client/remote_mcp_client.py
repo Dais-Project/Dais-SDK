@@ -48,6 +48,10 @@ class RemoteMcpClient(McpClient):
         if self._params.oauth_params is not None and storage is not None:
             self._params.oauth_params.oauth_token_storage = storage
 
+    @property
+    def name(self) -> str:
+        return self._name
+
     def _init_http_headers(self) -> dict[str, str] | None:
         if self._params.http_headers is None and self._params.bearer_token is None:
             return None
