@@ -11,8 +11,11 @@ def python_tool(func: F) -> F:
     return func
 
 class PythonToolset(Toolset):
+    def get_toolset_name(self) -> str:
+        return self.__class__.__name__
+
     def get_tools(self) -> list[ToolDef]:
-        toolset_name = self.__class__.__name__
+        toolset_name = self.get_toolset_name()
         result = []
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if not getattr(method, TOOL_FLAG, False): continue

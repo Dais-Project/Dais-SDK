@@ -17,7 +17,7 @@ class McpToolset(ABC, Toolset):
             result = await self._client.call_tool(mcp_tool.name, kwargs)
             return self._format_tool_result(result)
 
-        toolset_name = self._client.name
+        toolset_name = self.get_toolset_name()
         tool_def = ToolDef(
             name=f"{toolset_name}__{mcp_tool.name}",
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
@@ -71,6 +71,9 @@ class McpToolset(ABC, Toolset):
         mcp_tools = await self._client.list_tools()
         self._tools_cache = [self._mcp_tool_to_tool_def(tool)
                              for tool in mcp_tools]
+
+    def get_toolset_name(self) -> str:
+        return self.__class__.__name__
 
     def get_tools(self) -> list[ToolDef]:
         if self._tools_cache is None:
