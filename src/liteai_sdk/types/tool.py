@@ -31,6 +31,7 @@ class ToolDef:
     description: str
     execute: ToolFn
     parameters: dict[str, Any] | None = None
+    metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def from_tool_fn(tool_fn: ToolFn) -> "ToolDef":
