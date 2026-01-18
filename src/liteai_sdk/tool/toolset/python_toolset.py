@@ -11,15 +11,19 @@ def python_tool(func: F) -> F:
     return func
 
 class PythonToolset(Toolset):
-    def get_toolset_name(self) -> str:
+    @property
+    def name(self) -> str:
+        """
+        Since the usage of PythonToolset is to inherit and define methods as tools,
+        the name of the toolset is the name of the subclass.
+        """
         return self.__class__.__name__
 
     def get_tools(self) -> list[ToolDef]:
-        toolset_name = self.get_toolset_name()
         result = []
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if not getattr(method, TOOL_FLAG, False): continue
             tool_def = ToolDef.from_tool_fn(method)
-            tool_def.name = f"{toolset_name}__{tool_def.name}"
+            tool_def.name = self.format_tool_name(tool_def.name)
             result.append(tool_def)
         return result

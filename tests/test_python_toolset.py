@@ -79,6 +79,22 @@ class TestToolsetBasic:
 
         assert tools == []
 
+    def test_toolset_name_property(self):
+        """PythonToolset.name should return the class name by default"""
+        class MyToolset(PythonToolset):
+            pass
+
+        toolset = MyToolset()
+        assert toolset.name == "MyToolset"
+
+    def test_toolset_format_tool_name(self):
+        """Toolset.format_tool_name should follow the Namespace__ToolName pattern"""
+        class MyToolset(PythonToolset):
+            pass
+
+        toolset = MyToolset()
+        assert toolset.format_tool_name("my_tool") == "MyToolset__my_tool"
+
     # ------------------------------------------------------------------------
     # 1.3 PythonToolset with single tool
     # ------------------------------------------------------------------------

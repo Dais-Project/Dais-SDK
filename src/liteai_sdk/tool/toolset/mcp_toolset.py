@@ -1,4 +1,3 @@
-from abc import ABC
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
 from ..._mcp_client.mcp_client import McpClient, Tool, ToolResult
 from ..._mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
@@ -7,7 +6,7 @@ from .toolset import Toolset
 from ...types.tool import ToolDef
 from ...logger import logger
 
-class McpToolset(ABC, Toolset):
+class McpToolset(Toolset):
     def __init__(self, client: McpClient):
         self._client = client
         self._tools_cache: list[ToolDef] | None = None
@@ -17,9 +16,8 @@ class McpToolset(ABC, Toolset):
             result = await self._client.call_tool(mcp_tool.name, kwargs)
             return self._format_tool_result(result)
 
-        toolset_name = self.get_toolset_name()
         tool_def = ToolDef(
-            name=f"{toolset_name}__{mcp_tool.name}",
+            name=self.format_tool_name(mcp_tool.name),
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
             parameters=mcp_tool.inputSchema,
             execute=wrapper
@@ -72,8 +70,9 @@ class McpToolset(ABC, Toolset):
         self._tools_cache = [self._mcp_tool_to_tool_def(tool)
                              for tool in mcp_tools]
 
-    def get_toolset_name(self) -> str:
-        return self.__class__.__name__
+    @property
+    def name(self) -> str:
+        return self._client.name
 
     def get_tools(self) -> list[ToolDef]:
         if self._tools_cache is None:
