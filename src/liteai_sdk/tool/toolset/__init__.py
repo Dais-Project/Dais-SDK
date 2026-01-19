@@ -4,6 +4,9 @@ from .mcp_toolset import (
     McpToolset,
     LocalMcpToolset,
     RemoteMcpToolset,
+
+    LocalMcpClient,
+    RemoteMcpClient,
     LocalServerParams,
     RemoteServerParams,
     OAuthParams,
@@ -18,6 +21,9 @@ __all__ = [
     "McpToolset",
     "LocalMcpToolset",
     "RemoteMcpToolset",
+
+    "LocalMcpClient",
+    "RemoteMcpClient",
     "LocalServerParams",
     "RemoteServerParams",
     "OAuthParams",
