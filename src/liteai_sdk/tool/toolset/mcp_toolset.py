@@ -1,9 +1,9 @@
 from dataclasses import replace
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
 from .toolset import Toolset
-from ..._mcp_client.mcp_client import McpClient, Tool, ToolResult
-from ..._mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
-from ..._mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
+from ...mcp_client.base_mcp_client import McpClient, Tool, ToolResult
+from ...mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
+from ...mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
 from ...types.tool import ToolDef
 from ...logger import logger
 

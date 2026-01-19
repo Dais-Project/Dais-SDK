@@ -9,7 +9,7 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
 from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
-from .mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
+from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
 
 @dataclass

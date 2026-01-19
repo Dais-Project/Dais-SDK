@@ -2,7 +2,7 @@ from contextlib import AsyncExitStack
 from typing import Any
 from mcp import ClientSession, StdioServerParameters as StdioServerParams
 from mcp.client.stdio import stdio_client
-from .mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
+from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 
 LocalServerParams = StdioServerParams
 
