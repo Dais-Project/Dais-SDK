@@ -19,11 +19,13 @@ class PythonToolset(Toolset):
         """
         return self.__class__.__name__
 
-    def get_tools(self) -> list[ToolDef]:
+    def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
         result = []
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if not getattr(method, TOOL_FLAG, False): continue
             tool_def = ToolDef.from_tool_fn(method)
-            tool_def.name = self.format_tool_name(tool_def.name)
+            tool_def.name = (self.format_tool_name(tool_def.name)
+                             if namespaced_tool_name
+                             else tool_def.name)
             result.append(tool_def)
         return result

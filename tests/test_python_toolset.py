@@ -643,3 +643,84 @@ class TestToolsetEdgeCases:
         prepared = prepare_tools(tools)
         assert len(prepared) == 1
         assert prepared[0]["function"]["description"] == ""
+
+
+class TestNamespacedToolName:
+    """Test namespaced_tool_name parameter in get_tools"""
+
+    # ------------------------------------------------------------------------
+    # 1.23 get_tools with namespaced_tool_name=False
+    # ------------------------------------------------------------------------
+
+    def test_get_tools_without_namespace(self):
+        """get_tools with namespaced_tool_name=False should return original tool names"""
+        class MyToolset(PythonToolset):
+            @python_tool
+            def add(self, a: int, b: int) -> int:
+                """Add two numbers"""
+                return a + b
+
+            @python_tool
+            def multiply(self, x: int, y: int) -> int:
+                """Multiply two numbers"""
+                return x * y
+
+        toolset = MyToolset()
+        
+        # With namespaced_tool_name=True (default)
+        tools_with_namespace = toolset.get_tools(namespaced_tool_name=True)
+        assert len(tools_with_namespace) == 2
+        tool_names_with_ns = {t.name for t in tools_with_namespace}
+        assert tool_names_with_ns == {"MyToolset__add", "MyToolset__multiply"}
+        
+        # With namespaced_tool_name=False
+        tools_without_namespace = toolset.get_tools(namespaced_tool_name=False)
+        assert len(tools_without_namespace) == 2
+        tool_names_without_ns = {t.name for t in tools_without_namespace}
+        assert tool_names_without_ns == {"add", "multiply"}
+
+    def test_get_tools_default_namespace(self):
+        """get_tools should use namespaced_tool_name=True by default"""
+        class SimpleToolset(PythonToolset):
+            @python_tool
+            def calculate(self, value: int) -> int:
+                """Calculate something"""
+                return value * 2
+
+        toolset = SimpleToolset()
+        
+        # Default behavior should be namespaced
+        tools_default = toolset.get_tools()
+        tools_explicit = toolset.get_tools(namespaced_tool_name=True)
+        
+        assert len(tools_default) == 1
+        assert len(tools_explicit) == 1
+        assert tools_default[0].name == tools_explicit[0].name
+        assert tools_default[0].name == "SimpleToolset__calculate"
+
+    def test_get_tools_returns_copy(self):
+        """get_tools should return a copy, not a reference to internal cache"""
+        class MyToolset(PythonToolset):
+            @python_tool
+            def tool1(self, x: int) -> int:
+                """Tool 1"""
+                return x * 2
+
+        toolset = MyToolset()
+        tools1 = toolset.get_tools(namespaced_tool_name=False)
+        original_tool = tools1[0]
+        
+        # Modify the returned tool's name
+        tools1[0] = ToolDef(
+            name="modified_name",
+            description=original_tool.description,
+            parameters=original_tool.parameters,
+            execute=original_tool.execute
+        )
+        
+        # Get tools again - should not reflect the modification
+        tools2 = toolset.get_tools(namespaced_tool_name=False)
+        
+        assert len(tools2) == 1
+        assert tools2[0].name == "tool1"  # Original name, not "modified_name"
+        assert tools1[0].name == "modified_name"  # The first list was modified

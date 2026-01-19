@@ -1,8 +1,9 @@
+from dataclasses import replace
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
+from .toolset import Toolset
 from ..._mcp_client.mcp_client import McpClient, Tool, ToolResult
 from ..._mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
 from ..._mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
-from .toolset import Toolset
 from ...types.tool import ToolDef
 from ...logger import logger
 
@@ -17,7 +18,7 @@ class McpToolset(Toolset):
             return self._format_tool_result(result)
 
         tool_def = ToolDef(
-            name=self.format_tool_name(mcp_tool.name),
+            name=mcp_tool.name,
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
             parameters=mcp_tool.inputSchema,
             execute=wrapper
@@ -74,10 +75,12 @@ class McpToolset(Toolset):
     def name(self) -> str:
         return self._client.name
 
-    def get_tools(self) -> list[ToolDef]:
+    def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
         if self._tools_cache is None:
             raise RuntimeError(f"Not connected to MCP server. Call await {self.__class__.__name__}(...).connect() first")
-        return self._tools_cache
+        if not namespaced_tool_name:
+            return list(self._tools_cache)
+        return [replace(tool, name=self.format_tool_name(tool.name)) for tool in self._tools_cache]
 
 
 class LocalMcpToolset(McpToolset):
