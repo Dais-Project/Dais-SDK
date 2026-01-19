@@ -33,9 +33,9 @@ class ParamParser:
 
         transformed_messages = []
         for message in params.messages:
-            if type(message) is ToolMessage and\
-               message.result is None and\
-               message.error is None:
+            if (type(message) is ToolMessage and
+                message.result is None and
+                message.error is None):
                 # skip ToolMessage that is not resolved
                 continue
             transformed_messages.append(message.to_litellm_message())

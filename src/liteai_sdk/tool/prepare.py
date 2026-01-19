@@ -8,8 +8,9 @@ import inspect
 import types as _types
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time
-from typing import Annotated as _Annotated, Literal as _Literal, is_typeddict as _is_typeddict,\
-                   Any, get_args, get_origin, get_type_hints
+from typing import (Annotated as _Annotated, Literal as _Literal,
+                    is_typeddict as _is_typeddict, Any, get_args,
+                    get_origin, get_type_hints)
 from pydantic import BaseModel as PydanticBaseModel
 from ..types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
 
@@ -259,8 +260,8 @@ def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> dict[str, Any]:
         "function": {
             "name": tool_def.name,
             "description": tool_def.description,
-            "parameters": tool_def.parameters or\
-                          {"type": "object", "properties": properties, "required": required},
+            "parameters": (tool_def.parameters or
+                          {"type": "object", "properties": properties, "required": required}),
         },
     }
 

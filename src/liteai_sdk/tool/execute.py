@@ -30,17 +30,17 @@ def execute_tool_sync(tool, arguments: str | dict) -> str:
 @execute_tool_sync.register(MethodType)
 def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    result = asyncio.run(_coroutine_wrapper(toolfn(**arguments)))\
-             if asyncio.iscoroutinefunction(toolfn)\
-             else toolfn(**arguments)
+    result = (asyncio.run(_coroutine_wrapper(toolfn(**arguments)))
+              if asyncio.iscoroutinefunction(toolfn)
+              else toolfn(**arguments))
     return _result_normalizer(result)
 
 @execute_tool_sync.register(ToolDef)
 def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    result = asyncio.run(_coroutine_wrapper(tooldef.execute(**arguments)))\
-             if asyncio.iscoroutinefunction(tooldef.execute)\
-             else tooldef.execute(**arguments)
+    result = (asyncio.run(_coroutine_wrapper(tooldef.execute(**arguments)))
+              if asyncio.iscoroutinefunction(tooldef.execute)
+              else tooldef.execute(**arguments))
     return _result_normalizer(result)
 
 @singledispatch
@@ -51,15 +51,15 @@ async def execute_tool(tool, arguments: str | dict) -> str:
 @execute_tool.register(MethodType)
 async def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    result = await toolfn(**arguments)\
-             if asyncio.iscoroutinefunction(toolfn)\
-             else toolfn(**arguments)
+    result = (await toolfn(**arguments)
+             if asyncio.iscoroutinefunction(toolfn)
+             else toolfn(**arguments))
     return _result_normalizer(result)
 
 @execute_tool.register(ToolDef)
 async def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
-    result = await tooldef.execute(**arguments)\
-             if asyncio.iscoroutinefunction(tooldef.execute)\
-             else tooldef.execute(**arguments)
+    result = (await tooldef.execute(**arguments)
+             if asyncio.iscoroutinefunction(tooldef.execute)
+             else tooldef.execute(**arguments))
     return _result_normalizer(result)

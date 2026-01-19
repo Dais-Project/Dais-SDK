@@ -152,10 +152,10 @@ class AssistantMessage(ChatMessage):
             function = tool_call.get("function") # this can not be None
             function_name = function.get("name")
             function_arguments = function.get("arguments")
-            if id is None or\
-               function is None or\
-               function_name is None or\
-               function_arguments is None:
+            if (id is None or
+                function is None or
+                function_name is None or
+                function_arguments is None):
                 return None
             results.append(ToolCallTuple(id, function_name, function_arguments))
         return results
@@ -167,8 +167,8 @@ class AssistantMessage(ChatMessage):
         it only contains the tool call id, name and arguments.
         Returns None if there is no tool call in the assistant message.
         """
-        has_tool_def = self._request_params_ref is not None and\
-                       self._request_params_ref.tools is not None
+        has_tool_def = (self._request_params_ref is not None and
+                        self._request_params_ref.tools is not None)
         if not has_tool_def:
             logger.warning("AssistantMessage.get_partial_tool_messages() called without request params. "
                            "Call with_request_params() first to enable auto tool_def attachment feature.")

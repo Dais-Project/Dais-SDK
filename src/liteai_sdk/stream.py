@@ -1,7 +1,7 @@
 import dataclasses
 from litellm import ChatCompletionAssistantToolCall
-from litellm.types.utils import ChatCompletionDeltaToolCall,\
-                                ModelResponseStream as LiteLlmModelResponseStream
+from litellm.types.utils import (ChatCompletionDeltaToolCall,
+                                 ModelResponseStream as LiteLlmModelResponseStream)
 from .types.message import AssistantMessage
 
 @dataclasses.dataclass
