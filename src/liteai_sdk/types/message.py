@@ -4,7 +4,7 @@ import json
 import dataclasses
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
-from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 from litellm.types.utils import (
     Message as LiteLlmMessage,
     ModelResponse as LiteLlmModelResponse,
@@ -60,6 +60,7 @@ class ToolMessage(ChatMessage):
     result: str | None = None
     error: str | None = None
     role: Literal["tool"] = "tool"
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     _tool_def: ToolLike | None = PrivateAttr(default=None)
 
