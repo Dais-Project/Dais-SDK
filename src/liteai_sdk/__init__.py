@@ -3,7 +3,7 @@ import queue
 from typing import cast
 from collections.abc import AsyncGenerator, Generator
 from litellm import CustomStreamWrapper, completion, acompletion
-from litellm.utils import get_valid_models
+from litellm.utils import ProviderConfigManager
 from litellm.types.utils import (
     LlmProviders,
     ModelResponse as LiteLlmModelResponse,
@@ -161,11 +161,22 @@ class LLM:
         return results
 
     def list_models(self) -> list[str]:
-        return get_valid_models(
-            custom_llm_provider=self.provider.value,
-            check_provider_endpoint=True,
-            api_base=self.base_url,
-            api_key=self.api_key)
+        provider_config = ProviderConfigManager.get_provider_model_info(
+            model=None,
+            provider=self.provider,
+        )
+
+        if provider_config is None:
+            raise ValueError(f"The '{self.provider}' provider is not supported to list models.")
+
+        try:
+            models = provider_config.get_models(
+                api_key=self.api_key,
+                api_base=self.base_url
+            )
+        except Exception as e:
+            raise e
+        return models
 
     def generate_text_sync(self, params: LlmRequestParams) -> GenerateTextResponse:
         response = completion(**self._param_parser.parse_nonstream(params))
