@@ -67,7 +67,7 @@ class AssistantMessageCollector:
             if self.message_buf.images is None:
                 self.message_buf.images = []
             self.message_buf.images = delta.images
-        
+
         if delta.get("audio"):
             assert delta.audio is not None
             self.message_buf.audio = delta.audio

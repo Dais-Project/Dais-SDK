@@ -123,7 +123,7 @@ class LLM:
             except Exception as e:
                 error = f"{type(e).__name__}: {str(e)}"
             results.append(ToolMessage(
-                id=tool_call_tuple.id,
+                tool_call_id=tool_call_tuple.id,
                 name=function_name,
                 arguments=function_arguments,
                 result=result,
@@ -153,7 +153,7 @@ class LLM:
             except Exception as e:
                 error = f"{type(e).__name__}: {str(e)}"
             results.append(ToolMessage(
-                id=tool_call_tuple.id,
+                tool_call_id=tool_call_tuple.id,
                 name=function_name,
                 arguments=function_arguments,
                 result=result,

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import dataclasses
+from types import LambdaType
+import uuid
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
@@ -38,6 +40,7 @@ class ChatMessage(BaseModel, ABC):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
     @abstractmethod
     def to_litellm_message(self) -> AllMessageValues: ...
@@ -54,7 +57,7 @@ class ToolMessage(ChatMessage):
     The `tool_def` field is ref to the target tool of the tool call, and
     it will only be None when the target tool is not found
     """
-    id: str
+    tool_call_id: str
     name: str
     arguments: str
     result: str | None = None
@@ -92,7 +95,7 @@ class ToolMessage(ChatMessage):
         return ChatCompletionToolMessage(
             role=self.role,
             content=content,
-            tool_call_id=self.id)
+            tool_call_id=self.tool_call_id)
 
 class ToolCallTuple(NamedTuple):
     id: str
@@ -180,7 +183,7 @@ class AssistantMessage(ChatMessage):
         results = []
         for tool_call in parsed_tool_calls:
             tool_message = ToolMessage(
-                id=tool_call.id,
+                tool_call_id=tool_call.id,
                 name=tool_call.function_name,
                 arguments=tool_call.function_arguments,
                 result=None,
