@@ -47,7 +47,7 @@ Source = "https://github.com/Dais-Project/Dais-SDK"
 Tracker = "https://github.com/Dais-Project/Dais-SDK/issues"
 
 [tool.flit.module]
-name = "dais-sdk"
+name = "dais_sdk"
 
 [tool.bandit]
 exclude_dirs = ["build", "dist", "tests", "scripts"]
