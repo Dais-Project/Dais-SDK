@@ -3,7 +3,7 @@ requires = ["flit_core >=2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "dais_sdk"
+name = "dais-sdk"
 authors = [{ name = "BHznJNs", email = "bhznjns@outlook.com" }]
 description = "A wrapper of LiteLLM"
 readme = "README.md"
@@ -47,7 +47,7 @@ Source = "https://github.com/Dais-Project/Dais-SDK"
 Tracker = "https://github.com/Dais-Project/Dais-SDK/issues"
 
 [tool.flit.module]
-name = "dais_sdk"
+name = "dais-sdk"
 
 [tool.bandit]
 exclude_dirs = ["build", "dist", "tests", "scripts"]
