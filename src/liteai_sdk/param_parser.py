@@ -1,8 +1,11 @@
-from typing import Any
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING
 from litellm.types.utils import LlmProviders
 from .tool.prepare import prepare_tools
-from .types import LlmRequestParams, ToolMessage
-from .types.tool import ToolLike
+from .types.message import ToolMessage
+
+if TYPE_CHECKING:
+    from .types.request_params import LlmRequestParams
 
 ParsedParams = dict[str, Any]
 
@@ -15,20 +18,8 @@ class ParamParser:
         self._base_url = base_url
         self._api_key = api_key
 
-    @staticmethod
-    def _extract_tool_params(params: LlmRequestParams) -> list[ToolLike] | None:
-        if params.tools is None and params.toolsets is None:
-            return None
-        tools = []
-        if params.tools:
-            tools = params.tools
-        if params.toolsets:
-            for toolset in params.toolsets:
-                tools.extend(toolset.get_tools())
-        return tools
-
     def _parse(self, params: LlmRequestParams) -> ParsedParams:
-        extracted_tool_likes = self._extract_tool_params(params)
+        extracted_tool_likes = params.extract_tools()
         tools = extracted_tool_likes and prepare_tools(extracted_tool_likes)
 
         transformed_messages = []

@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import json
 import dataclasses
 import uuid
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
+from typing import Any, Literal, NamedTuple, cast
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from litellm.types.utils import (
     Message as LiteLlmMessage,
     ModelResponse as LiteLlmModelResponse,
@@ -27,12 +25,7 @@ from litellm.types.llms.openai import (
     ChatCompletionToolMessage,
     ChatCompletionSystemMessage,
 )
-from ..types.tool import ToolLike
-from ..tool.utils import find_tool_by_name
 from ..logger import logger
-
-if TYPE_CHECKING:
-    from . import LlmRequestParams
 
 class ChatMessage(BaseModel, ABC):
     model_config = ConfigDict(
@@ -52,10 +45,6 @@ class UserMessage(ChatMessage):
         return ChatCompletionUserMessage(role=self.role, content=self.content)
 
 class ToolMessage(ChatMessage):
-    """
-    The `tool_def` field is ref to the target tool of the tool call, and
-    it will only be None when the target tool is not found
-    """
     tool_call_id: str
     name: str
     arguments: str
@@ -64,31 +53,11 @@ class ToolMessage(ChatMessage):
     role: Literal["tool"] = "tool"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    _tool_def: ToolLike | None = PrivateAttr(default=None)
-
     @field_validator("result", mode="before")
     def validate_result(cls, v: Any) -> Any:
         if v is None: return v
         if isinstance(v, str): return v
         return json.dumps(v, ensure_ascii=False)
-
-    @property
-    def tool_def(self) -> ToolLike | None:
-        return self._tool_def
-
-    def with_tool_def(self, tool_def: ToolLike) -> "ToolMessage":
-        self._tool_def = tool_def
-        return self
-
-    def find_tool_def(self, request_params: LlmRequestParams) -> ToolLike | None:
-        has_tool_def = (request_params is not None and
-                        request_params.tools is not None)
-        if not has_tool_def:
-            logger.warning("AssistantMessage.get_partial_tool_messages() called without request params. "
-                           "Call with_request_params() first to enable auto tool_def attachment feature.")
-            return None
-        assert request_params.tools is not None
-        return find_tool_by_name(request_params.tools, self.name)
 
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         if self.result is None and self.error is None:
@@ -105,11 +74,6 @@ class ToolMessage(ChatMessage):
             role=self.role,
             content=content,
             tool_call_id=self.tool_call_id)
-
-class ToolCallTuple(NamedTuple):
-    id: str
-    function_name: str
-    function_arguments: str
 
 class AssistantMessage(ChatMessage):
     content: str | None = None
@@ -151,39 +115,31 @@ class AssistantMessage(ChatMessage):
                                               reasoning_content=self.reasoning_content,
                                               tool_calls=self.tool_calls)
 
-    def parse_tool_calls(self) -> list[ToolCallTuple] | None:
+    def get_incomplete_tool_messages(self) -> list[ToolMessage] | None:
+        """
+        Get a incomplete tool message from the assistant message.
+        The returned tool message is incomplete,
+        which means it only contains the tool call id, name and arguments.
+        Returns None if there is no tool call in the assistant message.
+        """
         if self.tool_calls is None: return None
-        results = []
+        results: list[ToolMessage] = []
         for tool_call in self.tool_calls:
             id = tool_call.get("id")
             function = tool_call.get("function") # this can not be None
             function_name = function.get("name")
-            function_arguments = function.get("arguments")
+            function_arguments = function.get("arguments", "")
             if (id is None or
                 function is None or
-                function_name is None or
-                function_arguments is None):
-                return None
-            results.append(ToolCallTuple(id, function_name, function_arguments))
-        return results
-
-    def get_partial_tool_messages(self) -> list[ToolMessage] | None:
-        """
-        Get a partial tool message from the assistant message.
-        The returned tool message is not complete,
-        it only contains the tool call id, name and arguments.
-        Returns None if there is no tool call in the assistant message.
-        """
-        parsed_tool_calls = self.parse_tool_calls()
-        if parsed_tool_calls is None: return None
-
-        results = [ToolMessage(
-            tool_call_id=tool_call.id,
-            name=tool_call.function_name,
-            arguments=tool_call.function_arguments,
-            result=None,
-            error=None)
-            for tool_call in parsed_tool_calls]
+                function_name is None):
+                logger.warning(f"Broken tool call: {tool_call}")
+                continue # broken tool call
+            results.append(ToolMessage(
+                tool_call_id=id,
+                name=function_name,
+                arguments=function_arguments,
+                result=None,
+                error=None))
         return results
 
 class SystemMessage(ChatMessage):

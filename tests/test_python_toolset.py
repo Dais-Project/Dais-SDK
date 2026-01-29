@@ -4,10 +4,12 @@ from typing import Any
 
 import pytest
 
+from liteai_sdk.types.request_params import LlmRequestParams
+from liteai_sdk.types.message import UserMessage
+from liteai_sdk.types.tool import ToolDef
 from liteai_sdk.tool.toolset import python_tool, PythonToolset
 from liteai_sdk.tool.prepare import prepare_tools
 from liteai_sdk.tool.execute import execute_tool, execute_tool_sync
-from liteai_sdk.types.tool import ToolDef
 
 
 class TestToolsetDecorator:
@@ -409,19 +411,15 @@ class TestToolsetAdvanced:
         assert counter2.value == 105
 
 
-class TestParamParserWithToolsets:
-    """Test ParamParser integration with toolsets"""
+class TestRequestParamsWithToolsets:
+    """Test LlmRequestParams integration with toolsets"""
 
     # ------------------------------------------------------------------------
-    # 1.15 ParamParser extracts tools from toolsets
+    # 1.15 LlmRequestParams extracts tools from toolsets
     # ------------------------------------------------------------------------
 
-    def test_param_parser_extract_toolsets(self):
-        """ParamParser should extract tools from toolsets parameter"""
-        from liteai_sdk.param_parser import ParamParser
-        from liteai_sdk.types import LlmRequestParams
-        from liteai_sdk.types.message import UserMessage
-
+    def test_extract_tools_from_toolsets(self):
+        """LlmRequestParams should extract tools from toolsets parameter"""
         class MyToolset(PythonToolset):
             @python_tool
             def tool1(self, x: int) -> int:
@@ -440,22 +438,18 @@ class TestParamParserWithToolsets:
             toolsets=[toolset]
         )
 
-        extracted = ParamParser._extract_tool_params(params)
+        extracted = params.extract_tools()
 
         assert extracted is not None
         assert len(extracted) == 2
         assert all(isinstance(tool, ToolDef) for tool in extracted)
 
     # ------------------------------------------------------------------------
-    # 1.16 ParamParser with both tools and toolsets
+    # 1.16 LlmRequestParams with both tools and toolsets
     # ------------------------------------------------------------------------
 
-    def test_param_parser_mixed_tools_and_toolsets(self):
-        """ParamParser should handle both tools and toolsets together"""
-        from liteai_sdk.param_parser import ParamParser
-        from liteai_sdk.types import LlmRequestParams
-        from liteai_sdk.types.message import UserMessage
-
+    def test_extract_tools_mixed_tools_and_toolsets(self):
+        """LlmRequestParams should handle both tools and toolsets together"""
         def standalone_tool(a: int) -> int:
             """Standalone tool"""
             return a + 1
@@ -474,7 +468,7 @@ class TestParamParserWithToolsets:
             toolsets=[toolset]
         )
 
-        extracted = ParamParser._extract_tool_params(params)
+        extracted = params.extract_tools()
 
         assert extracted is not None
         assert len(extracted) == 2
@@ -484,15 +478,11 @@ class TestParamParserWithToolsets:
         assert 'MyToolset__toolset_method' in tool_names
 
     # ------------------------------------------------------------------------
-    # 1.17 ParamParser with multiple toolsets
+    # 1.17 LlmRequestParams with multiple toolsets
     # ------------------------------------------------------------------------
 
-    def test_param_parser_multiple_toolsets(self):
-        """ParamParser should handle multiple toolsets"""
-        from liteai_sdk.param_parser import ParamParser
-        from liteai_sdk.types import LlmRequestParams
-        from liteai_sdk.types.message import UserMessage
-
+    def test_extract_tools_multiple_toolsets(self):
+        """LlmRequestParams should handle multiple toolsets"""
         class MathToolset(PythonToolset):
             @python_tool
             def add(self, a: int, b: int) -> int:
@@ -519,21 +509,17 @@ class TestParamParserWithToolsets:
             toolsets=[math_tools, string_tools]
         )
 
-        extracted = ParamParser._extract_tool_params(params)
+        extracted = params.extract_tools()
 
         assert extracted is not None
         assert len(extracted) == 3  # 1 from MathToolset + 2 from StringToolset
 
     # ------------------------------------------------------------------------
-    # 1.18 ParamParser with None toolsets
+    # 1.18 LlmRequestParams with None toolsets
     # ------------------------------------------------------------------------
 
-    def test_param_parser_none_toolsets(self):
-        """ParamParser should handle None toolsets gracefully"""
-        from liteai_sdk.param_parser import ParamParser
-        from liteai_sdk.types import LlmRequestParams
-        from liteai_sdk.types.message import UserMessage
-
+    def test_extract_tools_none_toolsets(self):
+        """LlmRequestParams should handle None toolsets gracefully"""
         params = LlmRequestParams(
             model="test-model",
             messages=[UserMessage(content="test")],
@@ -541,20 +527,16 @@ class TestParamParserWithToolsets:
             toolsets=None
         )
 
-        extracted = ParamParser._extract_tool_params(params)
+        extracted = params.extract_tools()
 
         assert extracted is None
 
     # ------------------------------------------------------------------------
-    # 1.19 ParamParser with empty toolsets list
+    # 1.19 LlmRequestParams with empty toolsets list
     # ------------------------------------------------------------------------
 
-    def test_param_parser_empty_toolsets(self):
-        """ParamParser should handle empty toolsets list"""
-        from liteai_sdk.param_parser import ParamParser
-        from liteai_sdk.types import LlmRequestParams
-        from liteai_sdk.types.message import UserMessage
-
+    def test_extract_tools_empty_toolsets(self):
+        """LlmRequestParams should handle empty toolsets list"""
         params = LlmRequestParams(
             model="test-model",
             messages=[UserMessage(content="test")],
@@ -562,7 +544,7 @@ class TestParamParserWithToolsets:
             toolsets=[]
         )
 
-        extracted = ParamParser._extract_tool_params(params)
+        extracted = params.extract_tools()
 
         # Should return empty list since toolsets is empty
         assert extracted == []

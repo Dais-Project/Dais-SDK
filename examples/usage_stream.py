@@ -1,11 +1,11 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, TextChunk, AssistantMessage
-
-# 注意：需要先导出 UsageChunk（目前在 __init__.py 的 __all__ 中缺失）
-# 临时方案：从 types.message 直接导入
-from liteai_sdk.types.message import UsageChunk
+from liteai_sdk import (
+    LLM, LlmProviders, LlmRequestParams,
+    UserMessage, AssistantMessage,
+    TextChunk, UsageChunk
+)
 
 load_dotenv()
 
@@ -17,16 +17,16 @@ async def main():
     print("=" * 60)
     print("流式请求示例 - Token 使用统计")
     print("=" * 60)
-    
+
     # 流式请求
     message_chunk, full_message_queue = await llm.stream_text(
         LlmRequestParams(
             model="deepseek-v3.1",
             messages=[UserMessage(content="请用一句话介绍 Python 编程语言")]))
-    
+
     print("\n实时响应内容：")
     print("-" * 60)
-    
+
     # 处理流式响应块
     async for chunk in message_chunk:
         match chunk:
@@ -40,9 +40,9 @@ async def main():
                 print(f"  输入 tokens:   {input_t}")
                 print(f"  输出 tokens:   {output_t}")
                 print(f"  总计 tokens:   {total_t}")
-    
+
     print("\n" + "=" * 60)
-    
+
     # 获取完整消息（包含 usage 信息）
     full_message = await full_message_queue.get()
     if isinstance(full_message, AssistantMessage) and full_message.usage:

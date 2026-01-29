@@ -32,7 +32,12 @@ from .mcp_client import (
     RemoteServerParams,
     OAuthParams,
 )
-from .types import LlmRequestParams, GenerateTextResponse, StreamTextResponseSync, StreamTextResponseAsync
+from .types import (
+    GenerateTextResponse,
+    StreamTextResponseSync, StreamTextResponseAsync,
+    FullMessageQueueSync, FullMessageQueueAsync,
+)
+from .types.request_params import LlmRequestParams
 from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
 from .types.exceptions import (
     AuthenticationError,
@@ -50,7 +55,7 @@ from .types.exceptions import (
 from .types.message import (
     ChatMessage, UserMessage, SystemMessage, AssistantMessage, ToolMessage,
     MessageChunk, TextChunk, UsageChunk, ReasoningChunk, AudioChunk, ImageChunk, ToolCallChunk,
-    ToolCallTuple, openai_chunk_normalizer
+    openai_chunk_normalizer
 )
 from .logger import logger, enable_logging
 
@@ -85,80 +90,81 @@ class LLM:
         self._param_parser = ParamParser(self.provider, self.base_url, self.api_key)
 
     @staticmethod
-    def _should_resolve_tool_calls(
+    async def execute_tool_call(
             params: LlmRequestParams,
-            message: AssistantMessage,
-            ) -> tuple[list[ToolLike],
-                       list[ToolCallTuple]] | None:
-        parsed_tool_calls = message.parse_tool_calls()
-        condition = (params.execute_tools and
-                     params.tools is not None and
-                     parsed_tool_calls is not None)
-        if condition:
-            assert params.tools is not None
-            assert parsed_tool_calls is not None
-            return params.tools, parsed_tool_calls
-        return None
+            incomplete_tool_message: ToolMessage
+            ) -> tuple[str | None, str | None]:
+        """
+        Receive incomplete tool messages, execute the tool calls and
+        return the result and error tuple.
+        """
+        name, arguments = incomplete_tool_message.name, incomplete_tool_message.arguments
+        tool_def = params.find_tool(incomplete_tool_message.name)
+        if tool_def is None:
+            raise LlmRequestParams.ToolDoesNotExistError(name)
+
+        result, error = None, None
+        try:
+            result = await execute_tool(tool_def, arguments)
+        except Exception as e:
+            error = f"{type(e).__name__}: {str(e)}"
+        return result, error
 
     @staticmethod
-    async def _execute_tool_calls(
-        tools: list[ToolLike],
-        tool_call_tuples: list[ToolCallTuple]
-        ) -> list[ToolMessage]:
-        results = []
-        for tool_call_tuple in tool_call_tuples:
-            function_name = tool_call_tuple.function_name
-            function_arguments = tool_call_tuple.function_arguments
+    def execute_tool_call_sync(
+            params: LlmRequestParams,
+            incomplete_tool_message: ToolMessage
+            ) -> tuple[str | None, str | None]:
+        """
+        Synchronous version of `execute_tool_call`.
+        """
+        name, arguments = incomplete_tool_message.name, incomplete_tool_message.arguments
+        tool_def = params.find_tool(incomplete_tool_message.name)
+        if tool_def is None:
+            raise LlmRequestParams.ToolDoesNotExistError(name)
 
-            if (target_tool := find_tool_by_name(tools, function_name)) is None:
-                logger.warning(f"Tool \"{function_name}\" not found, skipping execution.")
-                continue
-            if isinstance(target_tool, dict):
-                logger.warning(f"Tool \"{function_name}\" is a raw tool, skipping execution.")
-                continue
+        result, error = None, None
+        try:
+            result = execute_tool_sync(tool_def, arguments)
+        except Exception as e:
+            error = f"{type(e).__name__}: {str(e)}"
+        return result, error
 
-            result, error = None, None
+    def _resolve_tool_calls_sync(self, params: LlmRequestParams, assistant_message: AssistantMessage) -> Generator[ToolMessage]:
+        if not params.execute_tools: return
+        if (incomplete_tool_messages
+            := assistant_message.get_incomplete_tool_messages()) is None:
+            return
+        for incomplete_tool_message in incomplete_tool_messages:
             try:
-                result = await execute_tool(target_tool, function_arguments)
-            except Exception as e:
-                error = f"{type(e).__name__}: {str(e)}"
-            results.append(ToolMessage(
-                tool_call_id=tool_call_tuple.id,
-                name=function_name,
-                arguments=function_arguments,
+                result, error = LLM.execute_tool_call_sync(params, incomplete_tool_message)
+            except LlmRequestParams.ToolDoesNotExistError as e:
+                logger.warning(f"{e.message} Skipping this tool call.")
+                continue
+            yield ToolMessage(
+                tool_call_id=incomplete_tool_message.tool_call_id,
+                name=incomplete_tool_message.name,
+                arguments=incomplete_tool_message.arguments,
                 result=result,
-                error=error).with_tool_def(target_tool))
-        return results
+                error=error)
 
-    @staticmethod
-    def _execute_tool_calls_sync(
-        tools: list[ToolLike],
-        tool_call_tuples: list[ToolCallTuple]
-        ) -> list[ToolMessage]:
-        results = []
-        for tool_call_tuple in tool_call_tuples:
-            function_name = tool_call_tuple.function_name
-            function_arguments = tool_call_tuple.function_arguments
-
-            if (target_tool := find_tool_by_name(tools, function_name)) is None:
-                logger.warning(f"Tool \"{function_name}\" not found, skipping execution.")
-                continue
-            if isinstance(target_tool, dict):
-                logger.warning(f"Tool \"{function_name}\" is a raw tool, skipping execution.")
-                continue
-
-            result, error = None, None
+    async def _resolve_tool_calls(self, params: LlmRequestParams, assistant_message: AssistantMessage) -> AsyncGenerator[ToolMessage]:
+        if not params.execute_tools: return
+        if (incomplete_tool_messages :=
+            assistant_message.get_incomplete_tool_messages()) is None:
+            return
+        for incomplete_tool_message in incomplete_tool_messages:
             try:
-                result = execute_tool_sync(target_tool, function_arguments)
-            except Exception as e:
-                error = f"{type(e).__name__}: {str(e)}"
-            results.append(ToolMessage(
-                tool_call_id=tool_call_tuple.id,
-                name=function_name,
-                arguments=function_arguments,
+                result, error = await LLM.execute_tool_call(params, incomplete_tool_message)
+            except LlmRequestParams.ToolDoesNotExistError as e:
+                logger.warning(f"{e.message} Skipping this tool call.")
+                continue
+            yield ToolMessage(
+                tool_call_id=incomplete_tool_message.tool_call_id,
+                name=incomplete_tool_message.name,
+                arguments=incomplete_tool_message.arguments,
                 result=result,
-                error=error).with_tool_def(target_tool))
-        return results
+                error=error)
 
     def list_models(self) -> list[str]:
         provider_config = ProviderConfigManager.get_provider_model_info(
@@ -183,9 +189,8 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         assistant_message = AssistantMessage.from_litellm_message(response)
         result: GenerateTextResponse = [assistant_message]
-        if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
-            tools, tool_calls = tools_and_tool_calls
-            result += self._execute_tool_calls_sync(tools, tool_calls)
+        for tool_message in self._resolve_tool_calls_sync(params, assistant_message):
+            result.append(tool_message)
         return result
 
     async def generate_text(self, params: LlmRequestParams) -> GenerateTextResponse:
@@ -193,12 +198,16 @@ class LLM:
         response = cast(LiteLlmModelResponse, response)
         assistant_message = AssistantMessage.from_litellm_message(response)
         result: GenerateTextResponse = [assistant_message]
-        if (tools_and_tool_calls := self._should_resolve_tool_calls(params, assistant_message)):
-            tools, tool_calls = tools_and_tool_calls
-            result += await self._execute_tool_calls(tools, tool_calls)
+        async for tool_message in self._resolve_tool_calls(params, assistant_message):
+            result.append(tool_message)
         return result
 
     def stream_text_sync(self, params: LlmRequestParams) -> StreamTextResponseSync:
+        """
+        Returns:
+            - stream: Generator yielding `MessageChunk` objects
+            - full_message_queue: Queue containing complete `AssistantMessage`, `ToolMessage` (or `None` when done)
+        """
         def stream(response: CustomStreamWrapper) -> Generator[MessageChunk]:
             nonlocal message_collector
             for chunk in response:
@@ -208,20 +217,23 @@ class LLM:
 
             message = message_collector.get_message()
             full_message_queue.put(message)
-            if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
-                tools, tool_calls = tools_and_tool_calls
-                tool_messages = self._execute_tool_calls_sync(tools, tool_calls)
-                for tool_message in tool_messages:
-                    full_message_queue.put(tool_message)
+
+            for tool_message in self._resolve_tool_calls_sync(params, message):
+                full_message_queue.put(tool_message)
             full_message_queue.put(None)
 
         response = completion(**self._param_parser.parse_stream(params))
         message_collector = AssistantMessageCollector()
         returned_stream = stream(cast(CustomStreamWrapper, response))
-        full_message_queue = queue.Queue[AssistantMessage | ToolMessage | None]()
+        full_message_queue = FullMessageQueueSync()
         return returned_stream, full_message_queue
 
     async def stream_text(self, params: LlmRequestParams) -> StreamTextResponseAsync:
+        """
+        Returns:
+            - stream: Generator yielding `MessageChunk` objects
+            - full_message_queue: Queue containing complete `AssistantMessage`, `ToolMessage` (or `None` when done)
+        """
         async def stream(response: CustomStreamWrapper) -> AsyncGenerator[MessageChunk]:
             nonlocal message_collector
             async for chunk in response:
@@ -232,33 +244,17 @@ class LLM:
 
             message = message_collector.get_message()
             await full_message_queue.put(message)
-            if (tools_and_tool_calls := self._should_resolve_tool_calls(params, message)):
-                tools, tool_calls = tools_and_tool_calls
-                tool_messages = await self._execute_tool_calls(tools, tool_calls)
-                for tool_message in tool_messages:
-                    await full_message_queue.put(tool_message)
+            async for tool_message in self._resolve_tool_calls(params, message):
+                await full_message_queue.put(tool_message)
             await full_message_queue.put(None)
 
         response = await acompletion(**self._param_parser.parse_stream(params))
         message_collector = AssistantMessageCollector()
         returned_stream = stream(cast(CustomStreamWrapper, response))
-        full_message_queue = asyncio.Queue[AssistantMessage | ToolMessage | None]()
+        full_message_queue = FullMessageQueueAsync()
         return returned_stream, full_message_queue
 
 __all__ = [
-    # Exceptions
-    "AuthenticationError",
-    "PermissionDeniedError",
-    "RateLimitError",
-    "ContextWindowExceededError",
-    "BadRequestError",
-    "InvalidRequestError",
-    "InternalServerError",
-    "ServiceUnavailableError",
-    "ContentPolicyViolationError",
-    "APIError",
-    "Timeout",
-
     "LLM",
     "LlmProviders",
     "LlmRequestParams",
@@ -303,7 +299,22 @@ __all__ = [
     "GenerateTextResponse",
     "StreamTextResponseSync",
     "StreamTextResponseAsync",
+    "FullMessageQueueSync",
+    "FullMessageQueueAsync",
 
     "enable_debugging",
     "enable_logging",
+
+    # Exceptions
+    "AuthenticationError",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "ContextWindowExceededError",
+    "BadRequestError",
+    "InvalidRequestError",
+    "InternalServerError",
+    "ServiceUnavailableError",
+    "ContentPolicyViolationError",
+    "APIError",
+    "Timeout",
 ]
