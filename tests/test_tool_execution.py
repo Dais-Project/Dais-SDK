@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.execute import execute_tool, execute_tool_sync
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.execute import execute_tool, execute_tool_sync
 
 
 class TestToolExecution:

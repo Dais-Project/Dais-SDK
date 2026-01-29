@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal, Optional, Union
 import pytest
 from pydantic import BaseModel as PydanticBaseModel
 
-from liteai_sdk.tool.prepare import _python_type_to_json_schema
+from dais_sdk.tool.prepare import _python_type_to_json_schema
 
 
 class TestPythonTypeToJsonSchema:

@@ -1,7 +1,7 @@
 import os
 import asyncio
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
 
 load_dotenv()
 

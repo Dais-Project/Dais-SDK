@@ -1,10 +1,10 @@
 """
-Test suite for tool utility functions in liteai_sdk.tool.utils
+Test suite for tool utility functions in dais_sdk.tool.utils
 """
 
 import pytest
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.utils import find_tool_by_name
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.utils import find_tool_by_name
 
 # ============================================================================
 # Test Suite 1: find_tool_by_name

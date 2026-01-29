@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, AssistantMessage
+from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, AssistantMessage
 
 load_dotenv()
 

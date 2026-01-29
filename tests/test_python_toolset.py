@@ -4,12 +4,12 @@ from typing import Any
 
 import pytest
 
-from liteai_sdk.types.request_params import LlmRequestParams
-from liteai_sdk.types.message import UserMessage
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.toolset import python_tool, PythonToolset
-from liteai_sdk.tool.prepare import prepare_tools
-from liteai_sdk.tool.execute import execute_tool, execute_tool_sync
+from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.types.message import UserMessage
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.toolset import python_tool, PythonToolset
+from dais_sdk.tool.prepare import prepare_tools
+from dais_sdk.tool.execute import execute_tool, execute_tool_sync
 
 
 class TestToolsetDecorator:
@@ -21,7 +21,7 @@ class TestToolsetDecorator:
 
     def test_tool_decorator_marks_function(self):
         """@python_tool decorator should mark a function with the tool flag"""
-        from liteai_sdk.tool.toolset.python_toolset import TOOL_FLAG
+        from dais_sdk.tool.toolset.python_toolset import TOOL_FLAG
 
         @python_tool
         def my_function(x: int) -> int:
@@ -47,7 +47,7 @@ class TestToolsetDecorator:
 
     def test_tool_decorator_on_method(self):
         """@python_tool decorator should work on methods"""
-        from liteai_sdk.tool.toolset.python_toolset import TOOL_FLAG
+        from dais_sdk.tool.toolset.python_toolset import TOOL_FLAG
 
         class MyClass:
             @python_tool

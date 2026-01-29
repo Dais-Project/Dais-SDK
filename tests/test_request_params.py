@@ -1,13 +1,13 @@
 """
-Test suite for LlmRequestParams in liteai_sdk.types.request_params
+Test suite for LlmRequestParams in dais_sdk.types.request_params
 """
 
 import pytest
 
-from liteai_sdk.types.request_params import LlmRequestParams
-from liteai_sdk.types.message import UserMessage
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.toolset import python_tool, PythonToolset
+from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.types.message import UserMessage
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.toolset import python_tool, PythonToolset
 
 
 class TestLlmRequestParamsInit:
