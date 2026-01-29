@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from liteai_sdk.tool.execute import _arguments_normalizer, _result_normalizer
+from dais_sdk.tool.execute import _arguments_normalizer, _result_normalizer
 
 
 class TestArgumentsNormalizer:

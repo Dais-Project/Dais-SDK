@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from liteai_sdk import enable_debugging, LLM, LlmProviders, LlmRequestParams, UserMessage
+from dais_sdk import enable_debugging, LLM, LlmProviders, LlmRequestParams, UserMessage
 
 load_dotenv()
 enable_debugging()

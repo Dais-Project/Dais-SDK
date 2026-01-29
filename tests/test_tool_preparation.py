@@ -1,5 +1,5 @@
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.prepare import prepare_tools
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.prepare import prepare_tools
 
 
 class TestPrepareTools:

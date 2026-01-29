@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders
+from dais_sdk import LLM, LlmProviders
 
 load_dotenv()
 

@@ -1,16 +1,12 @@
-# LiteAI-SDK
+# Dais-SDK
 
-LiteAI-SDK is a wrapper of LiteLLM which provides a more intuitive API and [AI SDK](https://github.com/vercel/ai) like DX.
+Dais-SDK is a wrapper of LiteLLM which provides a more intuitive API and [AI SDK](https://github.com/vercel/ai) like DX.
 
 ## Installation
 
 ```
-pip install liteai-sdk
+pip install dais_sdk
 ```
-
-### Develop with coding agent
-
-You can access the complete usage guidance with [llms.txt](https://raw.githubusercontent.com/BHznJNs/liteai/refs/heads/main/llms.txt), just give it to your coding agent to tell it how to use LiteAI-SDK.
 
 ## Examples
 
@@ -19,7 +15,7 @@ Below is a simple example of just a API call:
 ```python
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
 
 load_dotenv()
 
@@ -39,7 +35,7 @@ Below is an example that shows the automatically tool call:
 ```python
 import os
 from dotenv import load_dotenv
-from liteai_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
 
 load_dotenv()
 

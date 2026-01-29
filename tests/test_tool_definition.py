@@ -2,8 +2,8 @@ from typing import Any, Optional
 
 import pytest
 
-from liteai_sdk.types.tool import ToolDef
-from liteai_sdk.tool.prepare import (
+from dais_sdk.types.tool import ToolDef
+from dais_sdk.tool.prepare import (
     generate_tool_definition_from_callable,
     generate_tool_definition_from_raw_tool_def,
     generate_tool_definition_from_tool_def,

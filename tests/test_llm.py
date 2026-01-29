@@ -1,4 +1,4 @@
-from liteai_sdk import LLM, LlmProviders
+from dais_sdk import LLM, LlmProviders
 
 def test_llm_create():
     llm = LLM(
