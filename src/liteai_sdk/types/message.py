@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import dataclasses
-from types import LambdaType
 import uuid
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
@@ -81,6 +80,16 @@ class ToolMessage(ChatMessage):
         self._tool_def = tool_def
         return self
 
+    def find_tool_def(self, request_params: LlmRequestParams) -> ToolLike | None:
+        has_tool_def = (request_params is not None and
+                        request_params.tools is not None)
+        if not has_tool_def:
+            logger.warning("AssistantMessage.get_partial_tool_messages() called without request params. "
+                           "Call with_request_params() first to enable auto tool_def attachment feature.")
+            return None
+        assert request_params.tools is not None
+        return find_tool_by_name(request_params.tools, self.name)
+
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         if self.result is None and self.error is None:
             raise ValueError(f"ToolMessage({self.id}, {self.name}) is incomplete, "
@@ -111,8 +120,6 @@ class AssistantMessage(ChatMessage):
     usage: LiteLlmUsage | None = None
     role: Literal["assistant"] = "assistant"
 
-    _request_params_ref: LlmRequestParams | None = PrivateAttr(default=None)
-
     @classmethod
     def from_litellm_message(cls, response: LiteLlmModelResponse) -> "AssistantMessage":
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
@@ -137,10 +144,6 @@ class AssistantMessage(ChatMessage):
             images=message.get("images"),
             usage=response.get("usage"),
         )
-
-    def with_request_params(self, request_params: LlmRequestParams) -> "AssistantMessage":
-        self._request_params_ref = request_params
-        return self
 
     def to_litellm_message(self) -> ChatCompletionAssistantMessage:
         return ChatCompletionAssistantMessage(role=self.role,
@@ -171,34 +174,16 @@ class AssistantMessage(ChatMessage):
         it only contains the tool call id, name and arguments.
         Returns None if there is no tool call in the assistant message.
         """
-        has_tool_def = (self._request_params_ref is not None and
-                        self._request_params_ref.tools is not None)
-        if not has_tool_def:
-            logger.warning("AssistantMessage.get_partial_tool_messages() called without request params. "
-                           "Call with_request_params() first to enable auto tool_def attachment feature.")
-
         parsed_tool_calls = self.parse_tool_calls()
         if parsed_tool_calls is None: return None
 
-        results = []
-        for tool_call in parsed_tool_calls:
-            tool_message = ToolMessage(
-                tool_call_id=tool_call.id,
-                name=tool_call.function_name,
-                arguments=tool_call.function_arguments,
-                result=None,
-                error=None)
-
-            if has_tool_def:
-                assert self._request_params_ref and self._request_params_ref.tools
-                target_tool = find_tool_by_name(self._request_params_ref.tools, tool_call.function_name)
-                if target_tool:
-                    tool_message = tool_message.with_tool_def(target_tool)
-                else:
-                    logger.warning(f"Tool {tool_call.function_name} not found in request params, "
-                                    "tool_def will not be attached to the tool message")
-
-            results.append(tool_message)
+        results = [ToolMessage(
+            tool_call_id=tool_call.id,
+            name=tool_call.function_name,
+            arguments=tool_call.function_arguments,
+            result=None,
+            error=None)
+            for tool_call in parsed_tool_calls]
         return results
 
 class SystemMessage(ChatMessage):
