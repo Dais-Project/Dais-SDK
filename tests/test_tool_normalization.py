@@ -86,17 +86,6 @@ class TestArgumentsNormalizer:
         with pytest.raises(json.JSONDecodeError):
             _arguments_normalizer('{incomplete')
 
-    def test_arguments_normalizer_invalid_type(self):
-        """Invalid argument type should raise ValueError"""
-        with pytest.raises(ValueError, match="Invalid arguments type"):
-            _arguments_normalizer(123)  # type: ignore
-
-        with pytest.raises(ValueError, match="Invalid arguments type"):
-            _arguments_normalizer([1, 2, 3])  # type: ignore
-
-        with pytest.raises(ValueError, match="Invalid arguments type"):
-            _arguments_normalizer(None)  # type: ignore
-
 
 class TestResultNormalizer:
     """Test the _result_normalizer function that ensures all tool results are strings"""

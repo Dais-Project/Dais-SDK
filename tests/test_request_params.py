@@ -5,6 +5,7 @@ Test suite for LlmRequestParams in dais_sdk.types.request_params
 import pytest
 
 from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.types.exceptions import ToolDoesNotExistError
 from dais_sdk.types.message import UserMessage
 from dais_sdk.types.tool import ToolDef
 from dais_sdk.tool.toolset import python_tool, PythonToolset
@@ -401,21 +402,3 @@ class TestFindTool:
 
         assert params.find_tool("standalone_tool") is standalone_tool
         assert params.find_tool("MyToolset__toolset_tool") is not None
-
-
-class TestToolDoesNotExistError:
-    """Test ToolDoesNotExistError exception"""
-
-    def test_error_message(self):
-        """Test error message format"""
-        error = LlmRequestParams.ToolDoesNotExistError("missing_tool")
-
-        assert error.tool_name == "missing_tool"
-        assert "missing_tool" in error.message
-        assert "does not exist" in error.message
-
-    def test_exception_inheritance(self):
-        """Test error is an Exception"""
-        error = LlmRequestParams.ToolDoesNotExistError("test_tool")
-        with pytest.raises(Exception):
-            raise error

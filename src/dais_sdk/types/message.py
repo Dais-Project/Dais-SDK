@@ -59,6 +59,14 @@ class ToolMessage(ChatMessage):
         if isinstance(v, str): return v
         return json.dumps(v, ensure_ascii=False)
 
+    def with_result(self, result: str | None, error: str | None) -> "ToolMessage":
+        return ToolMessage(
+            tool_call_id=self.tool_call_id,
+            name=self.name,
+            arguments=self.arguments,
+            result=result,
+            error=error)
+
     def to_litellm_message(self) -> ChatCompletionToolMessage:
         if self.result is None and self.error is None:
             raise ValueError(f"ToolMessage({self.id}, {self.name}) is incomplete, "

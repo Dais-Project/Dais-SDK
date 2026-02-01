@@ -47,9 +47,3 @@ class LlmRequestParams:
         if (tools := self.extract_tools()) is None:
             return None
         return find_tool_by_name(tools, tool_name)
-
-    class ToolDoesNotExistError(Exception):
-        def __init__(self, tool_name: str):
-            self.tool_name = tool_name
-            self.message = f"Tool \"{tool_name}\" does not exist in the request params."
-            super().__init__(self.message)
