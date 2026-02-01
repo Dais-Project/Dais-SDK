@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import override
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
 from .toolset import Toolset
 from ...mcp_client.base_mcp_client import McpClient, Tool, ToolResult
@@ -72,9 +73,11 @@ class McpToolset(Toolset):
                              for tool in mcp_tools]
 
     @property
+    @override
     def name(self) -> str:
         return self._client.name
 
+    @override
     def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
         if self._tools_cache is None:
             raise RuntimeError(f"Not connected to MCP server. Call await {self.__class__.__name__}(...).connect() first")

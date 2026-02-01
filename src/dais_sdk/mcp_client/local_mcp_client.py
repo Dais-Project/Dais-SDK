@@ -1,10 +1,10 @@
 from contextlib import AsyncExitStack
-from typing import Any
+from typing import Any, override
 from mcp import ClientSession, StdioServerParameters as StdioServerParams
 from mcp.client.stdio import stdio_client
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 
-LocalServerParams = StdioServerParams
+type LocalServerParams = StdioServerParams
 
 class LocalMcpClient(McpClient):
     def __init__(self, name: str, params: LocalServerParams):
@@ -14,9 +14,11 @@ class LocalMcpClient(McpClient):
         self._exit_stack: AsyncExitStack | None = None
 
     @property
+    @override
     def name(self) -> str:
         return self._name
 
+    @override
     async def connect(self):
         self._exit_stack = AsyncExitStack()
 
@@ -32,6 +34,7 @@ class LocalMcpClient(McpClient):
             await self.disconnect()
             raise
 
+    @override
     async def list_tools(self) -> list[Tool]:
         if not self._session:
             raise McpSessionNotEstablishedError()
@@ -39,6 +42,7 @@ class LocalMcpClient(McpClient):
         result = await self._session.list_tools()
         return result.tools
 
+    @override
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> ToolResult:
@@ -48,6 +52,7 @@ class LocalMcpClient(McpClient):
         response = await self._session.call_tool(tool_name, arguments)
         return ToolResult(response.isError, response.content)
 
+    @override
     async def disconnect(self) -> None:
         if self._exit_stack:
             await self._exit_stack.aclose()

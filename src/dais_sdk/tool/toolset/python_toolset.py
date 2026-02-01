@@ -1,17 +1,17 @@
 import inspect
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, override
 from .toolset import Toolset
 from ...types.tool import ToolDef
 
-F = TypeVar("F", bound=Callable[..., Any])
 TOOL_FLAG = "__is_tool__"
 
-def python_tool(func: F) -> F:
+def python_tool[F: Callable[..., Any]](func: F) -> F:
     setattr(func, TOOL_FLAG, True)
     return func
 
 class PythonToolset(Toolset):
     @property
+    @override
     def name(self) -> str:
         """
         Since the usage of PythonToolset is to inherit and define methods as tools,
@@ -19,6 +19,7 @@ class PythonToolset(Toolset):
         """
         return self.__class__.__name__
 
+    @override
     def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
         result = []
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):

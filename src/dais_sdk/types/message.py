@@ -2,7 +2,7 @@ import json
 import dataclasses
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Literal, NamedTuple, cast
+from typing import Any, Literal, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from litellm.types.utils import (
     Message as LiteLlmMessage,
@@ -186,7 +186,7 @@ class ToolCallChunk:
     arguments: str
     index: int
 
-MessageChunk = TextChunk | UsageChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
+type MessageChunk = TextChunk | UsageChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
 
 def openai_chunk_normalizer(
         chunk: LiteLlmModelResponseStream
