@@ -1,35 +1,33 @@
 import asyncio
 import json
+import inspect
 from functools import singledispatch
-from typing import Any, assert_never, Callable, cast
+from typing import Any, TypeAlias, assert_never, Callable, cast, TypeVar
 from types import FunctionType, MethodType
 from ..types.tool import ToolDef, ToolLike
-from ..types.exceptions import ToolDoesNotExistError, ToolArgumentDecodeError, ToolExecutionError
+from ..types.exceptions import LlmToolException
 from ..logger import logger
 
+E = TypeVar("E", bound=LlmToolException)
+ExceptionHandler: TypeAlias = Callable[[E], str]
+
 class ToolExceptionHandlerManager:
-    ToolException = ToolDoesNotExistError | ToolArgumentDecodeError | ToolExecutionError
-    Handler = Callable[[ToolException], str]
-
     def __init__(self):
-        self._handlers: dict[
-            type[ToolExceptionHandlerManager.ToolException],
-            ToolExceptionHandlerManager.Handler
-        ] = {}
+        self._handlers: dict[type[LlmToolException], Callable[[Any], str]] = {}
 
-    def register(self, exception_type: type[ToolException]):
-        def decorator(handler: ToolExceptionHandlerManager.Handler) -> ToolExceptionHandlerManager.Handler:
+    def register(self, exception_type: type[E]):
+        def decorator(handler: ExceptionHandler) -> ExceptionHandler:
             self.set_handler(exception_type, handler)
             return handler
         return decorator
 
-    def set_handler(self, exception_type: type[ToolException], handler: Handler):
+    def set_handler(self, exception_type: type[E], handler: ExceptionHandler):
         self._handlers[exception_type] = handler
 
-    def get_handler(self, exception_type: type[ToolException]) -> Handler | None:
+    def get_handler(self, exception_type: type[E]) -> ExceptionHandler | None:
         return self._handlers.get(exception_type)
 
-    def handle(self, e: ToolException) -> str:
+    def handle(self, e: LlmToolException) -> str:
         handler = self.get_handler(type(e))
         if handler is None:
             logger.warning(f"Unhandled tool exception: {type(e).__name__}", exc_info=e)
@@ -66,7 +64,7 @@ def execute_tool_sync(tool: ToolLike, arguments: str | dict) -> str:
 def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = (asyncio.run(toolfn(**arguments))
-              if asyncio.iscoroutinefunction(toolfn)
+              if inspect.iscoroutinefunction(toolfn)
               else toolfn(**arguments))
     return _result_normalizer(result)
 
@@ -74,7 +72,7 @@ def _(toolfn: Callable, arguments: str | dict) -> str:
 def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = (asyncio.run(tooldef.execute(**arguments))
-              if asyncio.iscoroutinefunction(tooldef.execute)
+              if inspect.iscoroutinefunction(tooldef.execute)
               else tooldef.execute(**arguments))
     return _result_normalizer(result)
 
@@ -92,7 +90,7 @@ async def execute_tool(tool: ToolLike, arguments: str | dict) -> str:
 async def _(toolfn: Callable, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = (await toolfn(**arguments)
-             if asyncio.iscoroutinefunction(toolfn)
+             if inspect.iscoroutinefunction(toolfn)
              else toolfn(**arguments))
     return _result_normalizer(result)
 
@@ -100,6 +98,6 @@ async def _(toolfn: Callable, arguments: str | dict) -> str:
 async def _(tooldef: ToolDef, arguments: str | dict) -> str:
     arguments = _arguments_normalizer(arguments)
     result = (await tooldef.execute(**arguments)
-             if asyncio.iscoroutinefunction(tooldef.execute)
+             if inspect.iscoroutinefunction(tooldef.execute)
              else tooldef.execute(**arguments))
     return _result_normalizer(result)

@@ -12,11 +12,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 version = "0.6.1"
 
 dependencies = [
@@ -30,7 +28,7 @@ dependencies = [
     "uvicorn==0.40.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "python-dotenv>=1.2.1"
 ]
@@ -38,6 +36,7 @@ test = [
     "pytest-cov",
     "pytest-mock",
     "pytest-runner",
+    "pytest-asyncio",
     "pytest",
     "pytest-github-actions-annotate-failures",
 ]
@@ -84,7 +83,7 @@ ignore = ["E722", "B001", "W503", "E203"]
 
 [tool.pyright]
 include = ["src"]
-pythonVersion = "3.11"
+pythonVersion = "3.14"
 typeCheckingMode = "standard"
 
 [tool.pytest.ini_options]
