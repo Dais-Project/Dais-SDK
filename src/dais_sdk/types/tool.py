@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import Any, Awaitable
 from ..logger import logger
 
-ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
+type ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
 """
 RawToolDef example:
@@ -23,7 +23,7 @@ RawToolDef example:
     }
 }
 """
-RawToolDef = dict[str, Any]
+type RawToolDef = dict[str, Any]
 
 @dataclasses.dataclass
 class ToolDef:
@@ -44,4 +44,4 @@ class ToolDef:
             execute=tool_fn,
         )
 
-ToolLike = ToolDef | RawToolDef | ToolFn
+type ToolLike = ToolDef | RawToolDef | ToolFn

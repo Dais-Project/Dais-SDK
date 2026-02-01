@@ -65,3 +65,20 @@ for message in messages:
         case "tool":
             print("Tool: ", message.result)
 ```
+
+## Development
+
+Create virtual environment
+```
+uv venv
+```
+
+Install all dependencies
+```
+uv sync --all-groups
+```
+
+Run test
+```
+uv run pytest
+```

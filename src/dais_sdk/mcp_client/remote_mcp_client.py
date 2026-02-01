@@ -2,7 +2,7 @@ import httpx
 import webbrowser
 from dataclasses import dataclass
 from contextlib import AsyncExitStack
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, override
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
@@ -49,6 +49,7 @@ class RemoteMcpClient(McpClient):
             self._params.oauth_params.oauth_token_storage = storage
 
     @property
+    @override
     def name(self) -> str:
         return self._name
 
@@ -105,6 +106,7 @@ class RemoteMcpClient(McpClient):
             raise ValueError("OAuth context not initialized")
         return await self._oauth_context.server.wait_for_code()
 
+    @override
     async def connect(self):
         self._exit_stack = AsyncExitStack()
         if self._oauth_context:
@@ -126,6 +128,7 @@ class RemoteMcpClient(McpClient):
             await self.disconnect()
             raise
 
+    @override
     async def list_tools(self) -> list[Tool]:
         if not self._session:
             raise McpSessionNotEstablishedError()
@@ -133,6 +136,7 @@ class RemoteMcpClient(McpClient):
         result = await self._session.list_tools()
         return result.tools
 
+    @override
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> ToolResult:
@@ -142,6 +146,7 @@ class RemoteMcpClient(McpClient):
         response = await self._session.call_tool(tool_name, arguments)
         return ToolResult(response.isError, response.content)
 
+    @override
     async def disconnect(self):
         try:
             if self._exit_stack:
