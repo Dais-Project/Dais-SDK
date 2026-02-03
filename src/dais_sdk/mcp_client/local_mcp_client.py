@@ -4,7 +4,7 @@ from mcp import ClientSession, StdioServerParameters as StdioServerParams
 from mcp.client.stdio import stdio_client
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 
-type LocalServerParams = StdioServerParams
+LocalServerParams = StdioServerParams
 
 class LocalMcpClient(McpClient):
     def __init__(self, name: str, params: LocalServerParams):
