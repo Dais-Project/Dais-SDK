@@ -74,6 +74,9 @@ class AssistantMessageCollector:
 
     def get_message(self) -> AssistantMessage:
         self.message_buf.tool_calls = self.tool_call_collector.get_tool_calls()
+        if self.message_buf.content is not None and self.message_buf.reasoning_content is None:
+            self.message_buf.content, self.message_buf.reasoning_content =\
+                AssistantMessage.extract_thinking_content(self.message_buf.content)
         return self.message_buf
 
     def clear(self):

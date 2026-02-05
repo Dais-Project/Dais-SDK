@@ -1,5 +1,6 @@
 import json
 import dataclasses
+import re
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Literal, cast
@@ -92,6 +93,22 @@ class AssistantMessage(ChatMessage):
     usage: LiteLlmUsage | None = None
     role: Literal["assistant"] = "assistant"
 
+    @staticmethod
+    def extract_thinking_content(text: str) -> tuple[str, str | None]:
+        """
+        Extract thinking content from the start of model responsed text.
+        Returns:
+            A tuple of (extracted_content, optional thinking_content)
+        """
+        pattern = r"<(think|thinking)>(.*?)</\1>"
+        match = re.match(pattern, text, re.DOTALL)
+        if match:
+            start, end = match.span()
+            thinking_content = match.group(2)
+            remaining_content = text[:start] + text[end:]
+            return remaining_content.strip(), thinking_content
+        return text, None
+
     @classmethod
     def from_litellm_message(cls, response: LiteLlmModelResponse) -> "AssistantMessage":
         choices = cast(list[LiteLlmModelResponseChoices], response.choices)
@@ -108,9 +125,16 @@ class AssistantMessage(ChatMessage):
                 type="function",
             ) for tool_call in cast(list[ChatCompletionMessageToolCall], message_tool_calls)]
 
+        content: str | None = message.get("content")
+        reasoning_content: str | None = message.get("reasoning_content")
+        if content is not None:
+            content, thinking_block_content = cls.extract_thinking_content(content)
+            if reasoning_content is None:
+                reasoning_content = thinking_block_content
+
         return cls.model_construct(
-            content=message.get("content"),
-            reasoning_content=message.get("reasoning_content"),
+            content=content,
+            reasoning_content=reasoning_content,
             tool_calls=tool_calls,
             audio=message.get("audio"),
             images=message.get("images"),
