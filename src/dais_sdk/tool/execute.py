@@ -45,6 +45,8 @@ class ToolExceptionHandlerManager:
 
 def _arguments_normalizer(arguments: str | dict) -> dict:
     if isinstance(arguments, str):
+        if len(arguments.strip()) == 0:
+            return {}
         parsed = json.loads(arguments)
         return cast(dict, parsed)
     elif isinstance(arguments, dict):
