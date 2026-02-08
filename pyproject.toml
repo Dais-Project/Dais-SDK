@@ -1,7 +1,3 @@
-[build-system]
-requires = ["flit_core >=2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
 name = "dais-sdk"
 authors = [{ name = "BHznJNs", email = "bhznjns@outlook.com" }]
@@ -15,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.14"
-version = "0.6.6"
+version = "0.6.7"
 
 dependencies = [
     "litellm>=1.81.0",
@@ -45,41 +41,9 @@ test = [
 Source = "https://github.com/Dais-Project/Dais-SDK"
 Tracker = "https://github.com/Dais-Project/Dais-SDK/issues"
 
-[tool.flit.module]
-name = "dais_sdk"
-
-[tool.bandit]
-exclude_dirs = ["build", "dist", "tests", "scripts"]
-number = 4
-recursive = true
-targets = "src"
-
-[tool.black]
-line-length = 120
-fast = true
-
-[tool.coverage.run]
-branch = true
-
-[tool.coverage.report]
-fail_under = 100
-
-[tool.flake8]
-max-line-length = 120
-select = "F,E,W,B,B901,B902,B903"
-exclude = [
-    ".eggs",
-    ".git",
-    ".tox",
-    "nssm",
-    "obj",
-    "out",
-    "packages",
-    "pywin32",
-    "tests",
-    "swagger_client",
-]
-ignore = ["E722", "B001", "W503", "E203"]
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
 
 [tool.pyright]
 include = ["src"]
@@ -90,7 +54,6 @@ typeCheckingMode = "standard"
 addopts = "--cov-report xml:coverage.xml --cov src --cov-fail-under 0 --cov-append -m 'not integration'"
 pythonpath = ["src"]
 testpaths = "tests"
-junit_family = "xunit2"
 markers = [
     "integration: marks as integration test",
     "notebooks: marks as notebook test",
