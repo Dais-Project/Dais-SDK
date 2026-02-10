@@ -40,9 +40,9 @@ class LlmRequestParams:
         return tools
 
     def find_tool(self, tool_name: str) -> ToolLike | None:
-        has_tool_def = ((self.tools is not None and len(self.tools) > 0) or
+        has_tool = ((self.tools is not None and len(self.tools) > 0) or
                         (self.toolsets is not None and len(self.toolsets) > 0))
-        if not has_tool_def: return None
+        if not has_tool: return None
 
         if (tools := self.extract_tools()) is None:
             return None

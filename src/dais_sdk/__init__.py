@@ -101,7 +101,7 @@ class LLM:
         return self._tool_exception_handler_manager
 
     async def execute_tool_call(self,
-                                tool_def: ToolLike,
+                                tool: ToolLike,
                                 arguments: str | dict) -> tuple[str | None, str | None]:
         """
         Returns:
@@ -109,18 +109,18 @@ class LLM:
         """
         result, error = None, None
         try:
-            result = await execute_tool(tool_def, arguments)
+            result = await execute_tool(tool, arguments)
         except json.JSONDecodeError as e:
             assert type(arguments) is str
-            _error = ToolArgumentDecodeError(get_tool_name(tool_def), arguments, e)
+            _error = ToolArgumentDecodeError(get_tool_name(tool), arguments, e)
             error = self._tool_exception_handler_manager.handle(_error)
         except Exception as e:
-            _error = ToolExecutionError(tool_def, arguments, e)
+            _error = ToolExecutionError(tool, arguments, e)
             error = self._tool_exception_handler_manager.handle(_error)
         return result, error
 
     def execute_tool_call_sync(self,
-                               tool_def: ToolLike,
+                               tool: ToolLike,
                                arguments: str | dict
                                ) -> tuple[str | None, str | None]:
         """
@@ -128,13 +128,13 @@ class LLM:
         """
         result, error = None, None
         try:
-            result = execute_tool_sync(tool_def, arguments)
+            result = execute_tool_sync(tool, arguments)
         except json.JSONDecodeError as e:
             assert type(arguments) is str
-            _error = ToolArgumentDecodeError(get_tool_name(tool_def), arguments, e)
+            _error = ToolArgumentDecodeError(get_tool_name(tool), arguments, e)
             error = self._tool_exception_handler_manager.handle(_error)
         except Exception as e:
-            _error = ToolExecutionError(tool_def, arguments, e)
+            _error = ToolExecutionError(tool, arguments, e)
             error = self._tool_exception_handler_manager.handle(_error)
         return result, error
 

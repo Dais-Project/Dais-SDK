@@ -272,12 +272,12 @@ def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> dict
     }
 
 def prepare_tools(tools: Sequence[ToolLike]) -> list[dict]:
-    tool_defs = []
+    tool_likes = []
     for tool in tools:
         if callable(tool):
-            tool_defs.append(generate_tool_definition_from_callable(tool))
+            tool_likes.append(generate_tool_definition_from_callable(tool))
         elif isinstance(tool, ToolDef):
-            tool_defs.append(generate_tool_definition_from_tool_def(tool))
+            tool_likes.append(generate_tool_definition_from_tool_def(tool))
         else:
-            tool_defs.append(generate_tool_definition_from_raw_tool_def(tool))
-    return tool_defs
+            tool_likes.append(generate_tool_definition_from_raw_tool_def(tool))
+    return tool_likes
