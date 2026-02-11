@@ -2,21 +2,26 @@ import httpx
 import webbrowser
 from dataclasses import dataclass
 from contextlib import AsyncExitStack
-from typing import Any, NamedTuple, override
+from typing import Annotated, Any, NamedTuple, override
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation
+from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation, WithJsonSchema
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
+
+type SafeTokenStorage = Annotated[
+    SkipValidation[TokenStorage], 
+    WithJsonSchema({"type": "object", "additionalProperties": True}, mode="serialization")
+]
 
 @dataclass
 class OAuthParams:
     oauth_scopes: list[str] | None = None
     oauth_timeout: int = 120
-    oauth_token_storage: SkipValidation[TokenStorage] = Field(
+    oauth_token_storage: SafeTokenStorage = Field(
         default_factory=InMemoryTokenStorage,
         exclude=True,
     )
