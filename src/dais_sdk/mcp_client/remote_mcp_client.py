@@ -7,16 +7,16 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation, WithJsonSchema
+from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation, WithJsonSchema, PlainSerializer
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
 
 type SafeTokenStorage = Annotated[
-    SkipValidation[TokenStorage], 
-    WithJsonSchema({"type": "object", "additionalProperties": True}, mode="serialization")
+    SkipValidation[TokenStorage],
+    PlainSerializer(lambda x: str(x), return_type=str),
+    WithJsonSchema({"type": "string"})
 ]
-
 @dataclass
 class OAuthParams:
     oauth_scopes: list[str] | None = None
