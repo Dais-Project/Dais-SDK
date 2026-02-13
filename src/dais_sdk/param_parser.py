@@ -23,10 +23,7 @@ class ParamParser:
 
         transformed_messages = []
         for message in params.messages:
-            if (type(message) is ToolMessage and
-                message.result is None and
-                message.error is None):
-                # skip ToolMessage that is not resolved
+            if (type(message) is ToolMessage and not message.is_complete):
                 continue
             transformed_messages.append(message.to_litellm_message())
 

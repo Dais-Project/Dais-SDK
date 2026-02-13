@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 from .tool import ToolLike
 from .message import ChatMessage
 from ..tool.toolset import Toolset
@@ -8,7 +8,7 @@ from ..tool.utils import find_tool_by_name
 @dataclass
 class LlmRequestParams:
     model: str
-    messages: list[ChatMessage]
+    messages: Sequence[ChatMessage]
     tools: list[ToolLike] | None = None
     toolsets: list[Toolset] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"

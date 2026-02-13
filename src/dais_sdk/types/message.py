@@ -60,6 +60,10 @@ class ToolMessage(ChatMessage):
         if isinstance(v, str): return v
         return json.dumps(v, ensure_ascii=False)
 
+    @property
+    def is_complete(self) -> bool:
+        return self.result is not None or self.error is not None
+
     def with_result(self, result: str | None, error: str | None) -> "ToolMessage":
         return ToolMessage(
             tool_call_id=self.tool_call_id,
