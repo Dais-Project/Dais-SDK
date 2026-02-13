@@ -12,9 +12,8 @@ from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTok
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
 
-@dataclass
-class OAuthParams:
-    oauth_scopes: list[str] | None = None
+class OAuthParams(BaseModel):
+    oauth_scopes: list[str] | None
     oauth_timeout: int = 120
     _oauth_token_storage: TokenStorage = PrivateAttr(default_factory=InMemoryTokenStorage)
 
@@ -22,9 +21,9 @@ class RemoteServerParams(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     url: str
-    bearer_token: str | None = None
-    oauth_params: OAuthParams | None = None
-    http_headers: dict[str, str] | None = None
+    bearer_token: str | None
+    oauth_params: OAuthParams | None
+    http_headers: dict[str, str] | None
 
 # --- --- --- --- --- ---
 
