@@ -7,24 +7,16 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
-from pydantic import AnyUrl, BaseModel, Field, ConfigDict, SkipValidation, WithJsonSchema, PlainSerializer
+from pydantic import AnyUrl, BaseModel, ConfigDict, PrivateAttr
 from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
 from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
 from ..logger import logger
 
-type SafeTokenStorage = Annotated[
-    SkipValidation[TokenStorage],
-    PlainSerializer(lambda x: str(x), return_type=str),
-    WithJsonSchema({"type": "string"})
-]
 @dataclass
 class OAuthParams:
     oauth_scopes: list[str] | None = None
     oauth_timeout: int = 120
-    oauth_token_storage: SafeTokenStorage = Field(
-        default_factory=InMemoryTokenStorage,
-        exclude=True,
-    )
+    _oauth_token_storage: TokenStorage = PrivateAttr(default_factory=InMemoryTokenStorage)
 
 class RemoteServerParams(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -51,7 +43,7 @@ class RemoteMcpClient(McpClient):
         self._exit_stack: AsyncExitStack | None = None
         self._oauth_context: OAuthContext | None = self._init_oauth()
         if self._params.oauth_params is not None and storage is not None:
-            self._params.oauth_params.oauth_token_storage = storage
+            self._params.oauth_params._oauth_token_storage = storage
 
     @property
     @override
@@ -89,7 +81,7 @@ class RemoteMcpClient(McpClient):
                 scope=scopes,
                 token_endpoint_auth_method="none",
             ),
-            storage=oauth_params.oauth_token_storage,
+            storage=oauth_params._oauth_token_storage,
             redirect_handler=self._handle_redirect,
             callback_handler=self._handle_oauth_callback,
         )
