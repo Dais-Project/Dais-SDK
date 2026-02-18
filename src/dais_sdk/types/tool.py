@@ -1,7 +1,19 @@
 import dataclasses
 from collections.abc import Callable
-from typing import Any, Awaitable
+from typing import Any, Awaitable, Literal, TypedDict
 from ..logger import logger
+
+class _ToolFunctionParameterSchema(TypedDict):
+    type: Literal["object"]
+    properties: dict[str, Any]
+    required: list[str]
+class _ToolFunctionSchema(TypedDict):
+    name: str
+    description: str
+    parameters: _ToolFunctionParameterSchema
+class ToolSchema(TypedDict):
+    type: Literal["function"]
+    function: _ToolFunctionSchema
 
 type ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
@@ -23,14 +35,14 @@ RawToolDef example:
     }
 }
 """
-type RawToolDef = dict[str, Any]
+type RawToolDef = _ToolFunctionSchema
 
 @dataclasses.dataclass
 class ToolDef:
     name: str
     description: str
     execute: ToolFn
-    parameters: dict[str, Any] | None = None
+    parameters: _ToolFunctionParameterSchema | None = None
     metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     @staticmethod

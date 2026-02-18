@@ -12,7 +12,7 @@ from typing import (Annotated as _Annotated, Literal as _Literal,
                     is_typeddict as _is_typeddict, Any, get_args,
                     get_origin, get_type_hints)
 from pydantic import BaseModel as PydanticBaseModel
-from ..types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
+from ..types.tool import ToolFn, ToolDef, RawToolDef, ToolLike, ToolSchema
 
 def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     """Convert Python type annotation to a JSON Schema for a parameter.
@@ -214,7 +214,7 @@ def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]],
 
     return properties, required
 
-def generate_tool_definition_from_callable(func: ToolFn) -> dict[str, Any]:
+def generate_tool_definition_from_callable(func: ToolFn) -> ToolSchema:
     """Convert a Python callable to OpenAI tools format.
 
     Args:
@@ -249,7 +249,7 @@ def generate_tool_definition_from_callable(func: ToolFn) -> dict[str, Any]:
         },
     }
 
-def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> dict[str, Any]:
+def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> ToolSchema:
     """Convert a ToolDef to OpenAI tools format.
 
     Args:
@@ -278,7 +278,7 @@ def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> dict[str, Any]:
         },
     }
 
-def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> dict[str, Any]:
+def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> ToolSchema:
     return {
         "type": "function",
         "function": raw_tool_def,

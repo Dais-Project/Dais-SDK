@@ -40,7 +40,7 @@ from .types import (
     FullMessageQueueSync, FullMessageQueueAsync,
 )
 from .types.request_params import LlmRequestParams
-from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike
+from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike, ToolSchema
 from .types.exceptions import (
     AuthenticationError,
     PermissionDeniedError,
@@ -280,6 +280,7 @@ __all__ = [
     "ToolDef",
     "RawToolDef",
     "ToolLike",
+    "ToolSchema",
     "execute_tool",
     "execute_tool_sync",
 
