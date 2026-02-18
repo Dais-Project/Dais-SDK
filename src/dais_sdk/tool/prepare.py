@@ -29,7 +29,7 @@ def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     - tuple[T1, T2, ...] -> array with prefixItems per element and min/maxItems
     - tuple[T, ...] -> array with items=schema(T)
     - Union[X, Y] and X | Y -> oneOf=[schema(X), schema(Y)] (without top-level type)
-    - Optional[T] (Union[T, None]) -> schema(T) (nullability not encoded)
+    - Optional[T] (Union[T, None]) -> oneOf=[schema(T), {"type": "null"}]
     - Literal[...]/Enum -> enum with appropriate type inference when uniform
     - TypedDict -> object with properties/required per annotations
     - dataclass/Pydantic BaseModel -> object with nested properties inferred from fields
@@ -167,12 +167,25 @@ def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     typing_union = getattr(__import__("typing"), "Union", None)
     if origin in (typing_union, _types.UnionType):
         non_none_args = [a for a in args if a is not type(None)]
+        has_none = len(non_none_args) < len(args)
+
         if len(non_none_args) > 1:
             schemas = [_python_type_to_json_schema(arg) for arg in non_none_args]
+            if has_none:
+                schemas.append({"type": "null"})
             return {"oneOf": schemas}
+
         if non_none_args:
-            return _python_type_to_json_schema(non_none_args[0])
-        return {"type": "string"}
+            inner = _python_type_to_json_schema(non_none_args[0])
+            if has_none:
+                # if inner is `oneOf`, append null to it and prevent nested oneOf
+                if "oneOf" in inner:
+                    inner["oneOf"].append({"type": "null"})
+                    return inner
+                return {"oneOf": [inner, {"type": "null"}]}
+            return inner
+
+        return {"type": "null"} # for `Union[None]`
 
     return {"type": "string"}
 
