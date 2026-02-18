@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.14"
-version = "0.6.15"
+version = "0.6.16"
 
 dependencies = [
     "litellm>=1.81.0",

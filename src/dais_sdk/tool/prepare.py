@@ -284,7 +284,7 @@ def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> Tool
         "function": raw_tool_def,
     }
 
-def prepare_tools(tools: Sequence[ToolLike]) -> list[dict]:
+def prepare_tools(tools: Sequence[ToolLike]) -> list[ToolSchema]:
     tool_likes = []
     for tool in tools:
         if callable(tool):
