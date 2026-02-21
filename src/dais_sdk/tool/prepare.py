@@ -189,9 +189,21 @@ def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
 
     return {"type": "string"}
 
+def _parse_description(python_type: Any) -> str | None:
+    origin = get_origin(python_type)
+    if origin is not _Annotated: return None
+
+    args = get_args(python_type)
+    metadata = args[1:]
+
+    if len(metadata) == 0: return None
+    if not isinstance(metadata[0], str): return None
+    return metadata[0]
+
 def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]], list[str]]:
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
+    annotated_type_hints = get_type_hints(func, include_extras=True)
 
     properties: dict[str, dict[str, Any]] = {}
     required: list[str] = []
@@ -200,13 +212,16 @@ def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]],
         if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
             continue
 
-        annotated_type = type_hints.get(param_name, str)
-        param_schema = _python_type_to_json_schema(annotated_type)
+        type_hint = type_hints.get(param_name, str)
+        param_schema = _python_type_to_json_schema(type_hint)
 
-        type_name = getattr(annotated_type, "__name__", str(annotated_type))
+        annotated_type = annotated_type_hints.get(param_name)
+        param_description = _parse_description(annotated_type)
+
+        type_name = getattr(type_hint, "__name__", str(type_hint))
         properties[param_name] = {
             **param_schema,
-            "description": f"Parameter {param_name} of type {type_name}",
+            "description": param_description or f"Parameter {param_name} of type {type_name}",
         }
 
         if param.default == inspect.Parameter.empty:

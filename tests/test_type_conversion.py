@@ -105,8 +105,8 @@ class TestPythonTypeToJsonSchema:
         assert result == {"oneOf": [{"type": "string"}, {"type": "integer"}]}
 
     def test_optional_type(self):
-        assert _python_type_to_json_schema(Optional[str]) == {"type": "string"}
-        assert _python_type_to_json_schema(Optional[int]) == {"type": "integer"}
+        assert _python_type_to_json_schema(Optional[str]) == {"oneOf": [{"type": "string"}, {"type": "null"}]}
+        assert _python_type_to_json_schema(Optional[int]) == {"oneOf": [{"type": "integer"}, {"type": "null"}]}
 
     def test_union_with_none_only(self):
         result = _python_type_to_json_schema(type(None))
@@ -281,5 +281,5 @@ class TestPythonTypeToJsonSchema:
         ]
 
     def test_nested_optional(self):
-        result = _python_type_to_json_schema(list[Optional[str]])
-        assert result == {"type": "array", "items": {"type": "string"}}
+        result = _python_type_to_json_schema(list[str | None])
+        assert result == {"type": "array", "items": {"oneOf": [{"type": "string"}, {"type": "null"}]}}

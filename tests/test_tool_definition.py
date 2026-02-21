@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 import pytest
 
@@ -124,6 +124,37 @@ class TestGenerateToolDefinition:
 
         result = generate_tool_definition_from_callable(documented_func)
         assert result["function"]["description"] == "This is a longer docstring.\nIt spans multiple lines."
+
+    # ------------------------------------------------------------------------
+    # 2.7 Annotated parameter description parsing
+    # ------------------------------------------------------------------------
+
+    def test_function_parameter_description_from_annotated_string(self):
+
+        def search(query: Annotated[str, "User search query"]) -> str:
+            """Search content by query"""
+            return query
+
+        result = generate_tool_definition_from_callable(search)
+        query_schema = result["function"]["parameters"]["properties"]["query"]
+
+        assert query_schema["type"] == "string"
+        assert query_schema["description"] == "User search query"
+
+    def test_function_parameter_description_fallback_when_annotated_metadata_invalid_or_missing(self):
+
+        def summarize(
+            text: Annotated[str, 123],
+            language: str,
+        ) -> str:
+            """Summarize text"""
+            return text
+
+        result = generate_tool_definition_from_callable(summarize)
+        props = result["function"]["parameters"]["properties"]
+
+        assert props["text"]["description"] == "Parameter text of type str"
+        assert props["language"]["description"] == "Parameter language of type str"
 
 class TestGenerateToolDefinitionFromToolDef:
     # ------------------------------------------------------------------------

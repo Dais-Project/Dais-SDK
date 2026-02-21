@@ -282,7 +282,7 @@ wheels = [
 
 [[package]]
 name = "dais-sdk"
-version = "0.6.12"
+version = "0.6.17"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
