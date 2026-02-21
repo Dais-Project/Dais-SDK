@@ -198,7 +198,7 @@ def _parse_description(python_type: Any) -> str | None:
 
     if len(metadata) == 0: return None
     if not isinstance(metadata[0], str): return None
-    return metadata[0]
+    return inspect.cleandoc(metadata[0])
 
 def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]], list[str]]:
     sig = inspect.signature(func)
