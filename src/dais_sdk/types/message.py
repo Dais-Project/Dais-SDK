@@ -18,6 +18,8 @@ from litellm.types.utils import (
 from litellm.types.llms.openai import (
     AllMessageValues,
     OpenAIMessageContent,
+    ChatCompletionTextObject,
+    OpenAIMessageContentListBlock,
     ChatCompletionAssistantToolCall,
     ImageURLListItem as ChatCompletionImageURL,
 
@@ -39,13 +41,25 @@ class ChatMessage(BaseModel, ABC):
     def to_litellm_message(self) -> AllMessageValues: ...
 
 class UserMessage(ChatMessage):
-    content: OpenAIMessageContent
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["content", "attachments", "role"]
+    })
+
+    content: str
+    attachments: list[OpenAIMessageContentListBlock] | None = None
     role: Literal["user"] = "user"
 
     def to_litellm_message(self) -> ChatCompletionUserMessage:
-        return ChatCompletionUserMessage(role=self.role, content=self.content)
+        content: list[OpenAIMessageContentListBlock] = [ChatCompletionTextObject(type="text", text=self.content)]
+        if self.attachments is not None:
+            content.extend(self.attachments)
+        return ChatCompletionUserMessage(role=self.role, content=content)
 
 class ToolMessage(ChatMessage):
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["tool_call_id", "name", "arguments", "result", "error", "role", "metadata"]
+    })
+
     tool_call_id: str
     name: str
     arguments: str
@@ -89,6 +103,10 @@ class ToolMessage(ChatMessage):
             tool_call_id=self.tool_call_id)
 
 class AssistantMessage(ChatMessage):
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["content", "reasoning_content", "tool_calls", "audio", "images", "usage", "role"]
+    })
+
     content: str | None = None
     reasoning_content: str | None = None
     tool_calls: list[ChatCompletionAssistantToolCall] | None = None
@@ -179,6 +197,10 @@ class AssistantMessage(ChatMessage):
         return results
 
 class SystemMessage(ChatMessage):
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["content", "role"]
+    })
+
     content: str
     role: Literal["system"] = "system"
 
