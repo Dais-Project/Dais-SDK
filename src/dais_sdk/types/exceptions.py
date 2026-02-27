@@ -1,21 +1,53 @@
 import json
 from typing import TYPE_CHECKING
+from types import SimpleNamespace
 from litellm.exceptions import (
     AuthenticationError,
+    NotFoundError,
+    BadRequestError,
+    UnprocessableEntityError,
+    UnsupportedParamsError,
+    Timeout,
     PermissionDeniedError,
     RateLimitError,
     ContextWindowExceededError,
-    BadRequestError,
-    InvalidRequestError,
+    RejectedRequestError,
+    ContentPolicyViolationError,
     InternalServerError,
     ServiceUnavailableError,
-    ContentPolicyViolationError,
+    BadGatewayError,
     APIError,
-    Timeout,
+    APIConnectionError,
+    APIResponseValidationError,
+    OpenAIError,
+    JSONSchemaValidationError,
 )
 
 if TYPE_CHECKING:
     from .tool import ToolLike
+
+LiteLlmExceptions = SimpleNamespace(
+    AuthenticationError=AuthenticationError,
+    NotFoundError=NotFoundError,
+    BadRequestError=BadRequestError,
+    UnprocessableEntityError=UnprocessableEntityError,
+    UnsupportedParamsError=UnsupportedParamsError,
+    Timeout=Timeout,
+    PermissionDeniedError=PermissionDeniedError,
+    RateLimitError=RateLimitError,
+    ContextWindowExceededError=ContextWindowExceededError,
+    RejectedRequestError=RejectedRequestError,
+    ContentPolicyViolationError=ContentPolicyViolationError,
+    InternalServerError=InternalServerError,
+    ServiceUnavailableError=ServiceUnavailableError,
+    BadGatewayError=BadGatewayError,
+    APIError=APIError,
+    APIConnectionError=APIConnectionError,
+    APIResponseValidationError=APIResponseValidationError,
+    OpenAIError=OpenAIError,
+    JSONSchemaValidationError=JSONSchemaValidationError,
+)
+
 
 class LlmToolException(Exception): pass
 
@@ -36,17 +68,7 @@ class ToolExecutionError(LlmToolException):
         self.raw_error = raw_error
 
 __all__ = [
-    "AuthenticationError",
-    "PermissionDeniedError",
-    "RateLimitError",
-    "ContextWindowExceededError",
-    "BadRequestError",
-    "InvalidRequestError",
-    "InternalServerError",
-    "ServiceUnavailableError",
-    "ContentPolicyViolationError",
-    "APIError",
-    "Timeout",
+    "LiteLlmExceptions",
 
     "LlmToolException",
     "ToolDoesNotExistError",

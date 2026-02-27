@@ -42,17 +42,7 @@ from .types import (
 from .types.request_params import LlmRequestParams
 from .types.tool import ToolFn, ToolDef, RawToolDef, ToolLike, ToolSchema
 from .types.exceptions import (
-    AuthenticationError,
-    PermissionDeniedError,
-    RateLimitError,
-    ContextWindowExceededError,
-    BadRequestError,
-    InvalidRequestError,
-    InternalServerError,
-    ServiceUnavailableError,
-    ContentPolicyViolationError,
-    APIError,
-    Timeout,
+    LiteLlmExceptions,
     LlmToolException,
     ToolDoesNotExistError,
     ToolArgumentDecodeError,
@@ -308,17 +298,7 @@ __all__ = [
     "enable_logging",
 
     # Exceptions
-    "AuthenticationError",
-    "PermissionDeniedError",
-    "RateLimitError",
-    "ContextWindowExceededError",
-    "BadRequestError",
-    "InvalidRequestError",
-    "InternalServerError",
-    "ServiceUnavailableError",
-    "ContentPolicyViolationError",
-    "APIError",
-    "Timeout",
+    "LiteLlmExceptions",
     "LlmToolException",
     "ToolDoesNotExistError",
     "ToolArgumentDecodeError",
