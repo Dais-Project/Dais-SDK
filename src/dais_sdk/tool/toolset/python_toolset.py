@@ -5,9 +5,13 @@ from .toolset import Toolset
 from ...types.tool import ToolDef
 
 TOOL_FLAG = "__is_tool__"
+TOOL_DEFAULTS = "__tool_defaults__"
 
 def is_tool(func: Callable) -> bool:
     return getattr(func, TOOL_FLAG, False)
+
+def get_tool_defaults(func: Callable) -> dict[str, Any]:
+    return getattr(func, TOOL_DEFAULTS, {})
 
 @overload
 def python_tool[F: Callable[..., Any]](func: F) -> F: ...
@@ -16,13 +20,15 @@ def python_tool[F: Callable[..., Any]](func: F) -> F: ...
 def python_tool[F: Callable[..., Any]](func: None = None,
                                        *,
                                        validate: bool = False,
-                                       validate_config: ConfigDict | None = None
+                                       validate_config: ConfigDict | None = None,
+                                       defaults: dict[str, Any] | None = None,
                                        ) -> Callable[[F], F]: ...
 
 def python_tool[F: Callable[..., Any]](func: F | None = None,
                                        *,
                                        validate: bool = False,
-                                       validate_config: ConfigDict | None = None
+                                       validate_config: ConfigDict | None = None,
+                                       defaults: dict[str, Any] | None = None,
                                        ) -> F | Callable[[F], F]:
     """
     Mark a callable as a tool and optionally enable runtime argument validation.
@@ -43,6 +49,7 @@ def python_tool[F: Callable[..., Any]](func: F | None = None,
             Defaults to ``False``.
         validate_config: Optional Pydantic ``ConfigDict`` passed to
             ``validate_call(config=...)``.
+        defaults: Optional static configs for tool.
 
     Returns:
         The decorated callable (when ``func`` is provided), or a decorator that accepts
@@ -56,12 +63,17 @@ def python_tool[F: Callable[..., Any]](func: F | None = None,
         @python_tool(validate=True)
         def add_checked(x: int, y: int) -> int:
             return x + y
+
+        @python_tool(defaults={"auto_approve": True})
+        def read_file(path: str) -> str
+            ...
     """
 
     def decorator(f: F) -> F:
         if validate:
             f = validate_call(config=validate_config)(f)
         setattr(f, TOOL_FLAG, True)
+        setattr(f, TOOL_DEFAULTS, defaults or {})
         return f
 
     if func is not None:
@@ -89,5 +101,6 @@ class PythonToolset(Toolset):
             tool_def.name = (self.format_tool_name(tool_def.name)
                              if namespaced_tool_name
                              else tool_def.name)
+            tool_def.defaults = get_tool_defaults(method)
             result.append(tool_def)
         return result
