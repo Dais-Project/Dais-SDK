@@ -1,13 +1,74 @@
 import inspect
-from typing import Any, Callable, override
+from typing import Any, Callable, override, overload
+from pydantic import validate_call, ConfigDict
 from .toolset import Toolset
 from ...types.tool import ToolDef
 
 TOOL_FLAG = "__is_tool__"
 
-def python_tool[F: Callable[..., Any]](func: F) -> F:
-    setattr(func, TOOL_FLAG, True)
-    return func
+def is_tool(func: Callable) -> bool:
+    return getattr(func, TOOL_FLAG, False)
+
+@overload
+def python_tool[F: Callable[..., Any]](func: F) -> F: ...
+
+@overload
+def python_tool[F: Callable[..., Any]](func: None = None,
+                                       *,
+                                       validate: bool = False,
+                                       validate_config: ConfigDict | None = None
+                                       ) -> Callable[[F], F]: ...
+
+def python_tool[F: Callable[..., Any]](func: F | None = None,
+                                       *,
+                                       validate: bool = False,
+                                       validate_config: ConfigDict | None = None
+                                       ) -> F | Callable[[F], F]:
+    """
+    Mark a callable as a tool and optionally enable runtime argument validation.
+
+    This decorator supports both forms:
+    - @python_tool
+    - @python_tool(validate=True, validate_config=...)
+
+    When validation is enabled, the target callable is wrapped by `pydantic.validate_call`,
+    so arguments are validated (and may be coerced) according to type annotations before
+    execution. The internal tool flag is attached to the final callable so it can be
+    recognized by ``PythonToolset.get_tools``.
+
+    Args:
+        func: The target callable when used as ``@python_tool``. ``None`` when used as
+            a configurable decorator factory.
+        validate: Whether to enable Pydantic runtime argument validation.
+            Defaults to ``False``.
+        validate_config: Optional Pydantic ``ConfigDict`` passed to
+            ``validate_call(config=...)``.
+
+    Returns:
+        The decorated callable (when ``func`` is provided), or a decorator that accepts
+        a callable and returns the decorated callable.
+
+    Examples:
+        @python_tool
+        def add(x: int, y: int) -> int:
+            return x + y
+
+        @python_tool(validate=True)
+        def add_checked(x: int, y: int) -> int:
+            return x + y
+    """
+
+    def decorator(f: F) -> F:
+        if validate:
+            f = validate_call(config=validate_config)(f)
+        setattr(f, TOOL_FLAG, True)
+        return f
+
+    if func is not None:
+        return decorator(func)
+    return decorator
+
+# --- --- --- --- --- ---
 
 class PythonToolset(Toolset):
     @property
@@ -23,7 +84,7 @@ class PythonToolset(Toolset):
     def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
         result = []
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
-            if not getattr(method, TOOL_FLAG, False): continue
+            if not is_tool(method): continue
             tool_def = ToolDef.from_tool_fn(method)
             tool_def.name = (self.format_tool_name(tool_def.name)
                              if namespaced_tool_name

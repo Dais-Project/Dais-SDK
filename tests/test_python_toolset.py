@@ -3,12 +3,13 @@ import json
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from dais_sdk.types.request_params import LlmRequestParams
 from dais_sdk.types.message import UserMessage
 from dais_sdk.types.tool import ToolDef
 from dais_sdk.tool.toolset import python_tool, PythonToolset
-from dais_sdk.tool.prepare import prepare_tools
+from dais_sdk.tool.prepare import prepare_tools, generate_tool_definition_from_callable
 from dais_sdk.tool.execute import execute_tool, execute_tool_sync
 
 
@@ -60,6 +61,64 @@ class TestToolsetDecorator:
         assert hasattr(MyClass.my_method, TOOL_FLAG)
         # Bound method should also work
         assert obj.my_method(5) == 15
+
+    def test_tool_decorator_preserves_generate_tool_definition(self):
+        """@python_tool decorator should produce identical tool definition via generate_tool_definition_from_callable"""
+
+        # Original function
+        def original_function(x: int, y: int, z: str = "default") -> str:
+            """Calculate and format result."""
+            return f"x={x}, y={y}, z={z}"
+
+        # Decorated function
+        decorated_function = python_tool(original_function)
+
+        # Generate tool definitions from both
+        original_schema = generate_tool_definition_from_callable(original_function)
+        decorated_schema = generate_tool_definition_from_callable(decorated_function)
+
+        # Verify all fields are identical
+        assert original_schema["type"] == decorated_schema["type"]
+        assert original_schema["function"]["name"] == decorated_schema["function"]["name"]
+        assert original_schema["function"]["description"] == decorated_schema["function"]["description"]
+        assert original_schema["function"]["parameters"] == decorated_schema["function"]["parameters"]
+
+        # Also verify deep equality of the entire schema
+        assert original_schema == decorated_schema
+
+    def test_tool_decorator_with_validate_preserves_generate_tool_definition(self):
+        """@python_tool(validate=True) should produce identical tool definition via generate_tool_definition_from_callable"""
+
+        def original_function(x: int, y: int, z: str = "default") -> str:
+            """Calculate and format result."""
+            return f"x={x}, y={y}, z={z}"
+
+        decorated_function = python_tool(validate=True)(original_function)
+
+        original_schema = generate_tool_definition_from_callable(original_function)
+        decorated_schema = generate_tool_definition_from_callable(decorated_function)
+
+        assert original_schema["type"] == decorated_schema["type"]
+        assert original_schema["function"]["name"] == decorated_schema["function"]["name"]
+        assert original_schema["function"]["description"] == decorated_schema["function"]["description"]
+        assert original_schema["function"]["parameters"] == decorated_schema["function"]["parameters"]
+        assert original_schema == decorated_schema
+
+
+    def test_tool_decorator_with_validate_runtime_call(self):
+        """@python_tool(validate=True) should validate arguments on runtime call"""
+
+        @python_tool(validate=True)
+        def add(x: int, y: int) -> int:
+            """Add two integers."""
+            return x + y
+
+        # Correct types: should return normally
+        assert add(1, 2) == 3
+
+        # Wrong type: should raise pydantic.ValidationError
+        with pytest.raises(ValidationError):
+            add("not-an-int", 2)
 
 
 class TestToolsetBasic:
