@@ -1,5 +1,6 @@
 import inspect
 from typing import Any, Callable, override, overload
+from collections.abc import Mapping
 from pydantic import validate_call, ConfigDict
 from .toolset import Toolset
 from ...types.tool import ToolDef
@@ -10,7 +11,7 @@ TOOL_DEFAULTS = "__tool_defaults__"
 def is_tool(func: Callable) -> bool:
     return getattr(func, TOOL_FLAG, False)
 
-def get_tool_defaults(func: Callable) -> dict[str, Any]:
+def get_tool_defaults(func: Callable) -> Mapping[str, Any]:
     return getattr(func, TOOL_DEFAULTS, {})
 
 @overload
@@ -21,14 +22,14 @@ def python_tool[F: Callable[..., Any]](func: None = None,
                                        *,
                                        validate: bool = False,
                                        validate_config: ConfigDict | None = None,
-                                       defaults: dict[str, Any] | None = None,
+                                       defaults: Mapping[str, Any] | None = None,
                                        ) -> Callable[[F], F]: ...
 
 def python_tool[F: Callable[..., Any]](func: F | None = None,
                                        *,
                                        validate: bool = False,
                                        validate_config: ConfigDict | None = None,
-                                       defaults: dict[str, Any] | None = None,
+                                       defaults: Mapping[str, Any] | None = None,
                                        ) -> F | Callable[[F], F]:
     """
     Mark a callable as a tool and optionally enable runtime argument validation.
@@ -73,7 +74,7 @@ def python_tool[F: Callable[..., Any]](func: F | None = None,
         if validate:
             f = validate_call(config=validate_config)(f)
         setattr(f, TOOL_FLAG, True)
-        setattr(f, TOOL_DEFAULTS, defaults or {})
+        setattr(f, TOOL_DEFAULTS, dict(defaults or {}))
         return f
 
     if func is not None:

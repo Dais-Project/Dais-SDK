@@ -1,5 +1,5 @@
 import dataclasses
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, Awaitable, Literal, TypedDict
 from ..logger import logger
 
@@ -44,7 +44,7 @@ class ToolDef:
     execute: ToolFn
     parameters: _ToolFunctionParameterSchema | None = None
     metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
-    defaults: dict[str, Any] = dataclasses.field(default_factory=dict)
+    defaults: Mapping[str, Any] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def from_tool_fn(tool_fn: ToolFn) -> "ToolDef":

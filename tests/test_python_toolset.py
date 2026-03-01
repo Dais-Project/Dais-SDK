@@ -1,5 +1,6 @@
 import asyncio
 import json
+from types import MappingProxyType
 from typing import Any
 
 import pytest
@@ -119,6 +120,54 @@ class TestToolsetDecorator:
         # Wrong type: should raise pydantic.ValidationError
         with pytest.raises(ValidationError):
             add("not-an-int", 2)
+
+    def test_tool_decorator_with_mapping_defaults(self):
+        """@python_tool(defaults=...) should accept Mapping and preserve key-values"""
+        from dais_sdk.tool.toolset.python_toolset import get_tool_defaults
+
+        defaults = MappingProxyType({"auto_approve": True, "max_tokens": 512})
+
+        @python_tool(defaults=defaults)
+        def read_file(path: str) -> str:
+            """Read file"""
+            return path
+
+        stored_defaults = get_tool_defaults(read_file)
+        assert isinstance(stored_defaults, dict)
+        assert stored_defaults == {"auto_approve": True, "max_tokens": 512}
+
+    def test_toolset_get_tools_propagates_defaults(self):
+        """PythonToolset.get_tools should propagate defaults into ToolDef.defaults"""
+
+        class DefaultToolset(PythonToolset):
+            @python_tool(defaults=MappingProxyType({"auto_approve": True, "retries": 2}))
+            def fetch(self, url: str) -> str:
+                """Fetch content"""
+                return url
+
+        tools = DefaultToolset().get_tools(namespaced_tool_name=False)
+
+        assert len(tools) == 1
+        assert tools[0].name == "fetch"
+        assert tools[0].defaults == {"auto_approve": True, "retries": 2}
+
+    def test_tool_defaults_do_not_track_external_mutation(self):
+        """defaults should be copied at decoration time and not track external dict mutations"""
+        defaults: dict = {"auto_approve": True}
+
+        class DefaultToolset(PythonToolset):
+            @python_tool(defaults=defaults)
+            def review(self, text: str) -> str:
+                """Review text"""
+                return text
+
+        defaults["auto_approve"] = False
+        defaults["new_field"] = "late-change"
+
+        tools = DefaultToolset().get_tools(namespaced_tool_name=False)
+
+        assert len(tools) == 1
+        assert tools[0].defaults == {"auto_approve": True}
 
 
 class TestToolsetBasic:
