@@ -119,7 +119,7 @@ class TestToolsetDecorator:
 
         # Wrong type: should raise pydantic.ValidationError
         with pytest.raises(ValidationError):
-            add("not-an-int", 2)
+            add("not-an-int", 2) # type: ignore
 
     def test_tool_decorator_with_mapping_defaults(self):
         """@python_tool(defaults=...) should accept Mapping and preserve key-values"""

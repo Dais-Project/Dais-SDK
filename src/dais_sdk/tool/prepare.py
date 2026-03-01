@@ -242,12 +242,14 @@ def generate_tool_definition_from_callable(func: ToolFn) -> ToolSchema:
         ValueError: If the function doesn't have proper docstring or type annotations
 
     Example:
+        ```
         >>> def get_weather(location: str, unit: str = "celsius") -> str:
         ...     '''Get weather information for a location.'''
         ...     return f"Weather in {location} is sunny, 25°{unit[0].upper()}"
         >>>
         >>> tool = generate_tool_definition_from_callable(get_weather)
         >>> # Returns OpenAI tools format dict
+        ```
 
     """
     if not func.__doc__:

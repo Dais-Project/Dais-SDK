@@ -1,3 +1,4 @@
+import functools
 from typing import Annotated, Any, Optional
 
 import pytest
@@ -328,3 +329,54 @@ class TestGenerateToolDefinitionFromRawToolDef:
         assert result["type"] == "function"
         assert result["function"]["name"] == "simple_tool"
         assert result["function"]["parameters"]["properties"] == {}
+
+
+class TestToolDefExecutes:
+    def test_executes_same_function(self):
+        def some_tool() -> str:
+            return "ok"
+
+        tool = ToolDef(name="some_tool", description="Some tool", execute=some_tool)
+
+        assert tool.executes(some_tool)
+
+    def test_executes_bound_and_unbound_methods(self):
+        class BrowserToolset:
+            def screenshot(self) -> str:
+                return "ok"
+
+        toolset = BrowserToolset()
+        tool = ToolDef(name="screenshot", description="Take screenshot", execute=toolset.screenshot)
+
+        assert tool.executes(BrowserToolset.screenshot)
+        assert tool.executes(toolset.screenshot)
+        assert tool.executes(BrowserToolset().screenshot)
+
+    def test_executes_different_functions_returns_false(self):
+        def add(a: int, b: int) -> int:
+            return a + b
+
+        def subtract(a: int, b: int) -> int:
+            return a - b
+
+        tool = ToolDef(name="add", description="Add numbers", execute=add)
+
+        assert tool.executes(subtract) is False
+
+    def test_executes_unwraps_wrapped_functions(self):
+        def base(x: int) -> int:
+            return x + 1
+
+        @functools.wraps(base)
+        def wrapped_once(x: int) -> int:
+            return base(x)
+
+        @functools.wraps(wrapped_once)
+        def wrapped_twice(x: int) -> int:
+            return wrapped_once(x)
+
+        tool = ToolDef(name="wrapped", description="Wrapped function", execute=wrapped_twice)
+
+        assert tool.executes(base)
+        assert tool.executes(wrapped_once)
+        assert tool.executes(wrapped_twice)

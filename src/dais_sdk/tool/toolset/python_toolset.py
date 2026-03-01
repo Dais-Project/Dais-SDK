@@ -57,6 +57,7 @@ def python_tool[F: Callable[..., Any]](func: F | None = None,
         a callable and returns the decorated callable.
 
     Examples:
+        ```python
         @python_tool
         def add(x: int, y: int) -> int:
             return x + y
@@ -66,8 +67,9 @@ def python_tool[F: Callable[..., Any]](func: F | None = None,
             return x + y
 
         @python_tool(defaults={"auto_approve": True})
-        def read_file(path: str) -> str
+        def read_file(path: str) -> str:
             ...
+        ```
     """
 
     def decorator(f: F) -> F:
