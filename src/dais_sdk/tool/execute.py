@@ -1,4 +1,3 @@
-import asyncio
 import json
 import inspect
 from functools import singledispatch
@@ -58,32 +57,6 @@ def _result_normalizer(result: Any) -> str:
     if isinstance(result, str):
         return result
     return json.dumps(result, ensure_ascii=False)
-
-@singledispatch
-def execute_tool_sync(tool: ToolLike, arguments: str | dict) -> str:
-    """
-    Raises:
-        ValueError: If the tool type is not supported.
-        JSONDecodeError: If the arguments is a string but not valid JSON.
-    """
-    raise ValueError(f"Invalid tool type: {type(tool)}")
-
-@execute_tool_sync.register(FunctionType)
-@execute_tool_sync.register(MethodType)
-def _(toolfn: Callable, arguments: str | dict) -> str:
-    arguments = _arguments_normalizer(arguments)
-    result = (asyncio.run(toolfn(**arguments))
-              if inspect.iscoroutinefunction(toolfn)
-              else toolfn(**arguments))
-    return _result_normalizer(result)
-
-@execute_tool_sync.register(ToolDef)
-def _(tooldef: ToolDef, arguments: str | dict) -> str:
-    arguments = _arguments_normalizer(arguments)
-    result = (asyncio.run(tooldef.execute(**arguments))
-              if inspect.iscoroutinefunction(tooldef.execute)
-              else tooldef.execute(**arguments))
-    return _result_normalizer(result)
 
 @singledispatch
 async def execute_tool(tool: ToolLike, arguments: str | dict) -> str:

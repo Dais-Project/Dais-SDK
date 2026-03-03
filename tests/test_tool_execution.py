@@ -4,108 +4,12 @@ import json
 import pytest
 
 from dais_sdk.types.tool import ToolDef
-from dais_sdk.tool.execute import execute_tool, execute_tool_sync
+from dais_sdk.tool.execute import execute_tool
 
 
 class TestToolExecution:
     # ------------------------------------------------------------------------
-    # 4.1 _arguments_normalizer tests (via execute_tool_sync)
-    # ------------------------------------------------------------------------
-    # Note: _arguments_normalizer is a private function, so we test it indirectly
-    # through execute_tool_sync which uses it internally
-
-    # ------------------------------------------------------------------------
-    # 4.2 execute_tool_sync with regular functions
-    # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_simple_function(self):
-        def add(a: int, b: int) -> int:
-            """Add two numbers"""
-            return a + b
-
-        result = execute_tool_sync(add, '{"a": 5, "b": 3}')
-        assert result == "8"
-        assert json.loads(result) == 8
-
-    def test_execute_tool_sync_function_with_string(self):
-        def greet(name: str) -> str:
-            """Greet a person"""
-            return f"Hello, {name}!"
-
-        result = execute_tool_sync(greet, '{"name": "Alice"}')
-        # String results should pass through unchanged
-        assert result == "Hello, Alice!"
-
-    def test_execute_tool_sync_function_with_dict(self):
-        def process(data: dict) -> int:
-            """Process data"""
-            return len(data)
-
-        result = execute_tool_sync(process, '{"data": {"a": 1, "b": 2, "c": 3}}')
-        assert result == "3"
-        assert json.loads(result) == 3
-
-    # ------------------------------------------------------------------------
-    # 4.3 execute_tool_sync with async functions
-    # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_async_function(self):
-        async def async_multiply(x: int, y: int) -> int:
-            """Async multiply"""
-            await asyncio.sleep(0.01)
-            return x * y
-
-        result = execute_tool_sync(async_multiply, '{"x": 4, "y": 7}')
-        assert result == "28"
-        assert json.loads(result) == 28
-
-    def test_execute_tool_sync_async_function_with_string(self):
-        async def async_upper(text: str) -> str:
-            """Async uppercase"""
-            await asyncio.sleep(0.01)
-            return text.upper()
-
-        result = execute_tool_sync(async_upper, '{"text": "hello"}')
-        # String results should pass through unchanged
-        assert result == "HELLO"
-
-    # ------------------------------------------------------------------------
-    # 4.4 execute_tool_sync with ToolDef
-    # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_tooldef_sync(self):
-        def concat(a: str, b: str) -> str:
-            """Concatenate strings"""
-            return a + b
-
-        tool_def = ToolDef(
-            name="concat_tool",
-            description="Concatenate two strings",
-            execute=concat,
-        )
-
-        result = execute_tool_sync(tool_def, '{"a": "Hello", "b": " World"}')
-        # String results should pass through unchanged
-        assert result == "Hello World"
-
-    def test_execute_tool_sync_tooldef_async(self):
-        async def async_subtract(x: int, y: int) -> int:
-            """Async subtract"""
-            await asyncio.sleep(0.01)
-            return x - y
-
-        tool_def = ToolDef(
-            name="subtract_tool",
-            description="Subtract two numbers",
-            execute=async_subtract,
-        )
-
-        result = execute_tool_sync(tool_def, '{"x": 10, "y": 3}')
-        assert result == "7"
-        assert json.loads(result) == 7
-
-    # ------------------------------------------------------------------------
-    # 4.5 execute_tool (async) with regular functions
+    # 4.1 execute_tool (async) with regular functions
     # ------------------------------------------------------------------------
 
     @pytest.mark.asyncio
@@ -192,24 +96,8 @@ class TestToolExecution:
         assert result == "olleh"
 
     # ------------------------------------------------------------------------
-    # 4.8 error handling
+    # 4.4 error handling
     # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_invalid_json(self):
-        def dummy(x: int) -> int:
-            """Dummy function"""
-            return x
-
-        with pytest.raises(json.JSONDecodeError):
-            execute_tool_sync(dummy, 'invalid json')
-
-    def test_execute_tool_sync_missing_argument(self):
-        def requires_arg(required: str) -> str:
-            """Requires argument"""
-            return required
-
-        with pytest.raises(TypeError):
-            execute_tool_sync(requires_arg, '{}')
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_invalid_json(self):
@@ -221,52 +109,8 @@ class TestToolExecution:
             await execute_tool(dummy, 'not valid json')
 
     # ------------------------------------------------------------------------
-    # 4.9 class method tests
+    # 4.5 class method tests
     # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_instance_method(self):
-        class Calculator:
-            def multiply(self, x: int, y: int) -> int:
-                """Multiply two numbers"""
-                return x * y
-
-        calc = Calculator()
-        result = execute_tool_sync(calc.multiply, '{"x": 6, "y": 7}')
-        assert result == "42"
-        assert json.loads(result) == 42
-
-    def test_execute_tool_sync_classmethod(self):
-        class MathUtils:
-            @classmethod
-            def power(cls, base: int, exp: int) -> int:
-                """Calculate power"""
-                return base ** exp
-
-        result = execute_tool_sync(MathUtils.power, '{"base": 2, "exp": 8}')
-        assert result == "256"
-        assert json.loads(result) == 256
-
-    def test_execute_tool_sync_staticmethod(self):
-        class StringUtils:
-            @staticmethod
-            def reverse(text: str) -> str:
-                """Reverse a string"""
-                return text[::-1]
-
-        result = execute_tool_sync(StringUtils.reverse, '{"text": "hello"}')
-        assert result == "olleh"
-
-    def test_execute_tool_sync_async_instance_method(self):
-        class AsyncCalculator:
-            async def add(self, a: int, b: int) -> int:
-                """Async add"""
-                await asyncio.sleep(0.01)
-                return a + b
-
-        calc = AsyncCalculator()
-        result = execute_tool_sync(calc.add, '{"a": 10, "b": 15}')
-        assert result == "25"
-        assert json.loads(result) == 25
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_instance_method(self):
@@ -317,28 +161,8 @@ class TestToolExecution:
         assert json.loads(result) == 25.0
 
     # ------------------------------------------------------------------------
-    # 4.10 invalid tool type error tests
+    # 4.6 invalid tool type error tests
     # ------------------------------------------------------------------------
-
-    def test_execute_tool_sync_invalid_type_int(self):
-        with pytest.raises(ValueError, match="Invalid tool type"):
-            execute_tool_sync(123, '{"x": 1}')  # type: ignore
-
-    def test_execute_tool_sync_invalid_type_string(self):
-        with pytest.raises(ValueError, match="Invalid tool type"):
-            execute_tool_sync("not a function", '{"x": 1}')  # type: ignore
-
-    def test_execute_tool_sync_invalid_type_list(self):
-        with pytest.raises(ValueError, match="Invalid tool type"):
-            execute_tool_sync([1, 2, 3], '{"x": 1}')  # type: ignore
-
-    def test_execute_tool_sync_invalid_type_dict(self):
-        with pytest.raises(ValueError, match="Invalid tool type"):
-            execute_tool_sync({"key": "value"}, '{"x": 1}')  # type: ignore
-
-    def test_execute_tool_sync_invalid_type_none(self):
-        with pytest.raises(ValueError, match="Invalid tool type"):
-            execute_tool_sync(None, '{"x": 1}')  # type: ignore
 
     @pytest.mark.asyncio
     async def test_execute_tool_async_invalid_type_int(self):

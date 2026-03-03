@@ -11,7 +11,7 @@ from dais_sdk.types.message import UserMessage
 from dais_sdk.types.tool import ToolDef
 from dais_sdk.tool.toolset import python_tool, PythonToolset
 from dais_sdk.tool.prepare import prepare_tools, generate_tool_definition_from_callable
-from dais_sdk.tool.execute import execute_tool, execute_tool_sync
+from dais_sdk.tool.execute import execute_tool
 
 
 class TestToolsetDecorator:
@@ -346,26 +346,7 @@ class TestToolsetWithExecution:
     """Test PythonToolset methods with tool execution"""
 
     # ------------------------------------------------------------------------
-    # 1.8 Execute PythonToolset method synchronously
-    # ------------------------------------------------------------------------
-
-    def test_execute_toolset_method_sync(self):
-        """execute_tool_sync should work with PythonToolset methods"""
-        class Calculator(PythonToolset):
-            @python_tool
-            def power(self, base: int, exponent: int) -> int:
-                """Calculate power"""
-                return base ** exponent
-
-        calc = Calculator()
-        tools = calc.get_tools()
-
-        result = execute_tool_sync(tools[0], '{"base": 2, "exponent": 10}')
-        assert result == "1024"
-        assert json.loads(result) == 1024
-
-    # ------------------------------------------------------------------------
-    # 1.9 Execute PythonToolset method asynchronously
+    # 1.8 Execute PythonToolset method asynchronously
     # ------------------------------------------------------------------------
 
     @pytest.mark.asyncio
@@ -384,7 +365,7 @@ class TestToolsetWithExecution:
         assert result == "olleh"
 
     # ------------------------------------------------------------------------
-    # 1.10 Execute async PythonToolset method
+    # 1.9 Execute async PythonToolset method
     # ------------------------------------------------------------------------
 
     @pytest.mark.asyncio
