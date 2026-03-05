@@ -1,34 +1,8 @@
 import json
-import dataclasses
-import re
 import uuid
-from abc import ABC, abstractmethod
-from typing import Any, Literal, cast
+from abc import ABC
+from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from litellm.types.utils import (
-    Message as LiteLlmMessage,
-    ModelResponse as LiteLlmModelResponse,
-    ModelResponseStream as LiteLlmModelResponseStream,
-    Choices as LiteLlmModelResponseChoices,
-    ChatCompletionAudioResponse,
-    ChatCompletionMessageToolCall,
-    ChatCompletionDeltaToolCall,
-    Usage as LiteLlmUsage
-)
-from litellm.types.llms.openai import (
-    AllMessageValues,
-    OpenAIMessageContent,
-    ChatCompletionTextObject,
-    OpenAIMessageContentListBlock,
-    ChatCompletionAssistantToolCall,
-    ImageURLListItem as ChatCompletionImageURL,
-
-    ChatCompletionUserMessage,
-    ChatCompletionAssistantMessage,
-    ChatCompletionToolMessage,
-    ChatCompletionSystemMessage,
-)
-from ..logger import logger
 
 class ChatMessage(BaseModel, ABC):
     model_config = ConfigDict(
@@ -37,32 +11,30 @@ class ChatMessage(BaseModel, ABC):
     )
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
-    @abstractmethod
-    def to_litellm_message(self) -> AllMessageValues: ...
-
-class UserMessage(ChatMessage):
+class SystemMessage(ChatMessage):
     model_config = ConfigDict(json_schema_extra={
-        "required": ["content", "attachments", "role"]
+        "required": ["content", "role"]
     })
 
     content: str
-    attachments: list[OpenAIMessageContentListBlock] | None = None
-    role: Literal["user"] = "user"
+    role: Literal["system"] = "system"
 
-    def to_litellm_message(self) -> ChatCompletionUserMessage:
-        content: list[OpenAIMessageContentListBlock] = [ChatCompletionTextObject(type="text", text=self.content)]
-        if self.attachments is not None:
-            content.extend(self.attachments)
-        return ChatCompletionUserMessage(role=self.role, content=content)
+class UserMessage(ChatMessage):
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["content", "role"]
+    })
+
+    content: str
+    role: Literal["user"] = "user"
 
 class ToolMessage(ChatMessage):
     model_config = ConfigDict(json_schema_extra={
-        "required": ["tool_call_id", "name", "arguments", "result", "error", "role", "metadata"]
+        "required": ["call_id", "name", "arguments", "result", "error", "role", "metadata"]
     })
 
-    tool_call_id: str
+    call_id: str
     name: str
-    arguments: str
+    arguments: dict[str, Any]
     result: str | None = None
     error: str | None = None
     role: Literal["tool"] = "tool"
@@ -78,96 +50,41 @@ class ToolMessage(ChatMessage):
     def is_complete(self) -> bool:
         return self.result is not None or self.error is not None
 
-    def with_result(self, result: str | None, error: str | None) -> "ToolMessage":
+    def with_result(self, result: str | None, error: str | None) -> ToolMessage:
         return ToolMessage(
-            tool_call_id=self.tool_call_id,
+            call_id=self.call_id,
             name=self.name,
             arguments=self.arguments,
             result=result,
             error=error)
 
-    def to_litellm_message(self) -> ChatCompletionToolMessage:
-        if self.result is None and self.error is None:
-            raise ValueError(f"ToolMessage({self.id}, {self.name}) is incomplete, "
-                              "result and error cannot be both None")
-
-        if self.error is not None:
-            content = json.dumps({"error": self.error}, ensure_ascii=False)
-        else:
-            assert self.result is not None
-            content = self.result
-
-        return ChatCompletionToolMessage(
-            role=self.role,
-            content=content,
-            tool_call_id=self.tool_call_id)
-
 class AssistantMessage(ChatMessage):
+    class ToolCall(BaseModel):
+        id: str
+        name: str
+        arguments: dict[str, Any]
+
+    class Usage(BaseModel):
+        input_tokens: int
+        output_tokens: int
+        total_tokens: int
+
+        @classmethod
+        def default(cls) -> Self:
+            return cls(
+                input_tokens=0,
+                output_tokens=0,
+                total_tokens=0)
+
     model_config = ConfigDict(json_schema_extra={
         "required": ["content", "reasoning_content", "tool_calls", "audio", "images", "usage", "role"]
     })
 
     content: str | None = None
     reasoning_content: str | None = None
-    tool_calls: list[ChatCompletionAssistantToolCall] | None = None
-    audio: ChatCompletionAudioResponse | None = None
-    images: list[ChatCompletionImageURL] | None = None
-    usage: LiteLlmUsage | None = None
+    tool_calls: list[ToolCall] | None = None
+    usage: Usage | None = None
     role: Literal["assistant"] = "assistant"
-
-    @staticmethod
-    def extract_thinking_content(text: str) -> tuple[str, str | None]:
-        """
-        Extract thinking content from the start of model responsed text.
-        Returns:
-            A tuple of (extracted_content, optional thinking_content)
-        """
-        pattern = r"<(think|thinking)>(.*?)</\1>"
-        match = re.match(pattern, text, re.DOTALL)
-        if match:
-            start, end = match.span()
-            thinking_content = match.group(2)
-            remaining_content = text[:start] + text[end:]
-            return remaining_content.strip(), thinking_content
-        return text, None
-
-    @classmethod
-    def from_litellm_message(cls, response: LiteLlmModelResponse) -> "AssistantMessage":
-        choices = cast(list[LiteLlmModelResponseChoices], response.choices)
-        message = choices[0].message
-
-        tool_calls: list[ChatCompletionAssistantToolCall] | None = None
-        if (message_tool_calls := message.get("tool_calls")) is not None:
-            tool_calls = [ChatCompletionAssistantToolCall(
-                id=tool_call.id,
-                function={
-                    "name": tool_call.function.name,
-                    "arguments": tool_call.function.arguments,
-                },
-                type="function",
-            ) for tool_call in cast(list[ChatCompletionMessageToolCall], message_tool_calls)]
-
-        content: str | None = message.get("content")
-        reasoning_content: str | None = message.get("reasoning_content")
-        if content is not None:
-            content, thinking_block_content = cls.extract_thinking_content(content)
-            if reasoning_content is None:
-                reasoning_content = thinking_block_content
-
-        return cls.model_construct(
-            content=content,
-            reasoning_content=reasoning_content,
-            tool_calls=tool_calls,
-            audio=message.get("audio"),
-            images=message.get("images"),
-            usage=response.get("usage"),
-        )
-
-    def to_litellm_message(self) -> ChatCompletionAssistantMessage:
-        return ChatCompletionAssistantMessage(role=self.role,
-                                              content=self.content,
-                                              reasoning_content=self.reasoning_content,
-                                              tool_calls=self.tool_calls)
 
     def get_incomplete_tool_messages(self) -> list[ToolMessage] | None:
         """
@@ -179,91 +96,18 @@ class AssistantMessage(ChatMessage):
         if self.tool_calls is None: return None
         results: list[ToolMessage] = []
         for tool_call in self.tool_calls:
-            id = tool_call.get("id")
-            function = tool_call.get("function") # this can not be None
-            function_name = function.get("name")
-            function_arguments = function.get("arguments", "")
-            if (id is None or
-                function is None or
-                function_name is None):
-                logger.warning(f"Broken tool call: {tool_call}")
-                continue # broken tool call
             results.append(ToolMessage(
-                tool_call_id=id,
-                name=function_name,
-                arguments=function_arguments,
+                call_id=tool_call.id,
+                name=tool_call.name,
+                arguments=tool_call.arguments,
                 result=None,
                 error=None))
         return results
 
-class SystemMessage(ChatMessage):
-    model_config = ConfigDict(json_schema_extra={
-        "required": ["content", "role"]
-    })
-
-    content: str
-    role: Literal["system"] = "system"
-
-    def to_litellm_message(self) -> ChatCompletionSystemMessage:
-        return ChatCompletionSystemMessage(role=self.role, content=self.content)
-
-@dataclasses.dataclass
-class TextChunk:
-    content: str
-
-@dataclasses.dataclass
-class UsageChunk:
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-
-@dataclasses.dataclass
-class ReasoningChunk:
-    content: str
-
-@dataclasses.dataclass
-class AudioChunk:
-    data: ChatCompletionAudioResponse
-
-@dataclasses.dataclass
-class ImageChunk:
-    data: list[ChatCompletionImageURL]
-
-@dataclasses.dataclass
-class ToolCallChunk:
-    id: str | None
-    name: str | None
-    arguments: str
-    index: int
-
-type MessageChunk = TextChunk | UsageChunk | ReasoningChunk | AudioChunk | ImageChunk | ToolCallChunk
-
-def openai_chunk_normalizer(
-        chunk: LiteLlmModelResponseStream
-        ) -> list[MessageChunk]:
-    if len(chunk.choices) == 0: return []
-
-    result = []
-    delta = chunk.choices[0].delta
-    if delta.get("content"):
-        result.append(TextChunk(cast(str, delta.content)))
-    if delta.get("reasoning_content"):
-        result.append(ReasoningChunk(cast(str, delta.reasoning_content)))
-    if delta.get("audio"):
-        result.append(AudioChunk(cast(ChatCompletionAudioResponse, delta.audio)))
-    if delta.get("images"):
-        result.append(ImageChunk(cast(list[ChatCompletionImageURL], delta.images)))
-    if delta.get("tool_calls"):
-        for tool_call in cast(list[ChatCompletionDeltaToolCall], delta.tool_calls):
-            result.append(ToolCallChunk(
-                tool_call.id,
-                tool_call.function.name,
-                tool_call.function.arguments,
-                tool_call.index))
-    if (usage := getattr(chunk, "usage", None)) is not None:
-        usage = cast(LiteLlmUsage, usage)
-        result.append(UsageChunk(
-            input_tokens=usage.prompt_tokens,
-            output_tokens=usage.completion_tokens,
-            total_tokens=usage.total_tokens))
-    return result
+__all__ = [
+    "ChatMessage",
+    "SystemMessage",
+    "UserMessage",
+    "AssistantMessage",
+    "ToolMessage",
+]

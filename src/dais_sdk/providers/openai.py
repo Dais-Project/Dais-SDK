@@ -1,0 +1,236 @@
+import json
+import re
+from typing import cast, override
+from openai import AsyncOpenAI
+from openai.types.chat import (
+    ChatCompletion,
+    ChatCompletionChunk,
+    ChatCompletionFunctionToolParam,
+    ChatCompletionMessageFunctionToolCallParam,
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolMessageParam,
+)
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from openai.types.chat.completion_create_params import CompletionCreateParamsNonStreaming, CompletionCreateParamsStreaming
+from .base_provider import BaseProvider, BaseMessageParser, BaseParamParser
+from .utils import StreamMessageCollector
+from ..tool.prepare import prepare_tools
+from ..types.request_params import LlmRequestParams
+from ..types.tool import ToolSchema
+from ..types.message import ChatMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
+from ..types.event import AssistantMessageEvent, StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
+
+
+class OpenAIProviderMessageParser(BaseMessageParser[
+    ChatCompletionChunk,
+    ChatCompletion,
+    ChatCompletionMessageParam,
+]):
+    @override
+    @staticmethod
+    def normalize_chunk(chunk: ChatCompletionChunk) -> list[TextChunkEvent | ToolCallChunkEvent | UsageChunkEvent] | None:
+        if len(chunk.choices) == 0: return None
+
+        result = []
+
+        if chunk.usage:
+            result.append(UsageChunkEvent(
+                input_tokens=chunk.usage.prompt_tokens,
+                output_tokens=chunk.usage.completion_tokens,
+                total_tokens=chunk.usage.total_tokens))
+
+        delta: ChoiceDelta = chunk.choices[0].delta
+        if delta.content:
+            result.append(TextChunkEvent(delta.content))
+        if delta.tool_calls:
+            for tool_call in delta.tool_calls:
+                result.append(ToolCallChunkEvent(
+                    tool_call.id,
+                    name=tool_call.function and tool_call.function.name,
+                    arguments=tool_call.function and tool_call.function.arguments,
+                    index=tool_call.index))
+        return result
+
+    @override
+    @staticmethod
+    def to_message(response: ChatCompletion) -> AssistantMessage:
+        if len(response.choices) == 0:
+            raise ValueError("Empty response")
+
+        usage = response.usage
+        choice = response.choices[0]
+        message = choice.message
+
+        tool_calls = None
+        if message.tool_calls:
+            tool_calls = [AssistantMessage.ToolCall(
+                id=tool_call.id,
+                name=tool_call.function.name,
+                arguments=json.loads(tool_call.function.arguments),
+            ) for tool_call in message.tool_calls
+              if tool_call.type == "function"]
+
+        return AssistantMessage(
+            content=message.content,
+            tool_calls=tool_calls,
+            usage=AssistantMessage.Usage(
+                input_tokens=usage.prompt_tokens,
+                output_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+            ) if usage else None,
+        )
+
+    @override
+    @staticmethod
+    def from_message(message: ChatMessage) -> ChatCompletionMessageParam:
+        match message:
+            case SystemMessage():
+                return ChatCompletionSystemMessageParam(
+                    role=message.role,
+                    content=message.content,
+                )
+            case UserMessage():
+                return ChatCompletionUserMessageParam(
+                    role=message.role,
+                    content=message.content,
+                )
+            case AssistantMessage():
+                message_param = ChatCompletionAssistantMessageParam(
+                    role=message.role,
+                    content=message.content,
+                )
+                if message.tool_calls is not None:
+                    tool_calls = [ChatCompletionMessageFunctionToolCallParam(
+                        type="function",
+                        id=tool_call.id,
+                        function={
+                            "name": tool_call.name,
+                            "arguments": json.dumps(tool_call.arguments, ensure_ascii=False),
+                        },
+                    ) for tool_call in message.tool_calls]
+                    message_param["tool_calls"] = tool_calls
+                return message_param
+            case ToolMessage():
+                if message.result is None and message.error is None:
+                    raise ValueError(f"ToolMessage({message.id}, {message.name}) is incomplete, "
+                                        "result and error cannot be both None")
+                if message.error is not None:
+                    content = json.dumps({"error": message.error}, ensure_ascii=False)
+                else:
+                    assert message.result is not None
+                    content = message.result
+
+                return ChatCompletionToolMessageParam(
+                    role=message.role,
+                    content=content,
+                    tool_call_id=message.call_id,
+                )
+            case _:
+                raise NotImplementedError
+
+class OpenAIProviderParamParser(BaseParamParser[
+    CompletionCreateParamsNonStreaming,
+    CompletionCreateParamsStreaming
+]):
+    def _preparse_tools(self, params: LlmRequestParams) -> list[ToolSchema] | None:
+        extracted_tool_likes = params.extract_tools()
+        if extracted_tool_likes is None:
+            return None
+        return prepare_tools(extracted_tool_likes)
+
+    def _preparse_messages(self, params: LlmRequestParams) -> list[ChatCompletionMessageParam]:
+        transformed_messages: list[ChatCompletionMessageParam] = []
+        for message in params.messages:
+            if (type(message) is ToolMessage and not message.is_complete):
+                continue
+            parsed_message = self._message_parser.from_message(message)
+            transformed_messages.append(parsed_message)
+        return transformed_messages
+
+    @override
+    def parse_nonstream(self, params: LlmRequestParams) -> CompletionCreateParamsNonStreaming:
+        result_params = CompletionCreateParamsNonStreaming(
+            model=params.model,
+            messages=self._preparse_messages(params),
+            tool_choice=params.tool_choice,
+            temperature=params.temperature,
+            max_tokens=params.max_tokens,
+            **(params.extra_args or {})
+        )
+        if (tools := self._preparse_tools(params)) is not None:
+            result_params["tools"] = cast(list[ChatCompletionFunctionToolParam], tools)
+        return result_params
+
+    @override
+    def parse_stream(self, params: LlmRequestParams) -> CompletionCreateParamsStreaming:
+        base_params = cast(CompletionCreateParamsStreaming, self.parse_nonstream(params))
+        base_params["stream"] = True
+        base_params["stream_options"] = {"include_usage": True}
+        return base_params
+
+class OpenAIProvider(BaseProvider):
+    def __init__(self, base_url: str, api_key: str):
+        self._client = AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key,
+        )
+        self._message_parser = OpenAIProviderMessageParser()
+        self._param_parser = OpenAIProviderParamParser(self._message_parser)
+
+    @staticmethod
+    def _parse_thinking_content(message: AssistantMessage) -> AssistantMessage:
+        def match_thinking_content(text: str) -> tuple[str, str | None]:
+            pattern = r"<(think|thinking)>(.*?)</\1>"
+            match = re.match(pattern, text, re.DOTALL)
+            if match:
+                start, end = match.span()
+                thinking_content = match.group(2)
+                remaining_content = text[:start] + text[end:]
+                return remaining_content.strip(), thinking_content
+            return text, None
+
+        if message.content is None or message.reasoning_content is not None:
+            return message.model_copy()
+        content, reasoning_content = match_thinking_content(message.content)
+        return message.model_copy(
+            update={
+                "content": content,
+                "reasoning_content": reasoning_content,
+            })
+
+    @override
+    async def list_models(self) -> list[str]:
+        models = await self._client.models.list()            
+        return [model.id for model in models.data]
+
+    @override
+    async def request_nonstream(self, params: LlmRequestParams):
+        parsed = self._param_parser.parse_nonstream(params)
+        response = await self._client.chat.completions.create(
+            **parsed,
+            extra_headers=params.headers,
+        )
+        message = self._message_parser.to_message(response)
+        return self._parse_thinking_content(message)
+
+    @override
+    async def request_stream(self, params: LlmRequestParams) -> StreamMessageGenerator:
+        parsed = self._param_parser.parse_stream(params)
+        response = await self._client.chat.completions.create(
+            **parsed,
+            extra_headers=params.headers,
+        )
+        message_collector = StreamMessageCollector()
+        async for chunk in response:
+            normalized_chunks = self._message_parser.normalize_chunk(chunk)
+            if normalized_chunks is None: continue
+            for normalized in normalized_chunks:
+                yield normalized
+                message_collector.collect(normalized)
+
+        full_message = message_collector.get_message()
+        full_message = self._parse_thinking_content(full_message)
+        yield AssistantMessageEvent(message=full_message)
