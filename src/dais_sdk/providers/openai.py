@@ -5,8 +5,8 @@ from openai import AsyncOpenAI
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionChunk,
+    ChatCompletionFunctionToolParam,
     ChatCompletionMessageFunctionToolCallParam,
-    ChatCompletionToolUnionParam,
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
@@ -161,7 +161,7 @@ class OpenAIProviderParamParser(BaseParamParser[
             **(params.extra_args or {})
         )
         if (tools := self._preparse_tools(params)) is not None:
-            result_params["tools"] = cast(list[ChatCompletionToolUnionParam], tools)
+            result_params["tools"] = cast(list[ChatCompletionFunctionToolParam], tools)
         return result_params
 
     @override

@@ -1,7 +1,7 @@
 import json
 import inspect
 from functools import singledispatch
-from typing import Any, assert_never, Callable, cast
+from typing import Any, Callable, assert_never, cast
 from types import FunctionType, MethodType
 from ..types.tool import ToolDef, ToolLike
 from ..types.exceptions import LlmToolException

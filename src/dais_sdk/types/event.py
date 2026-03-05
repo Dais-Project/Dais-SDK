@@ -28,3 +28,12 @@ class AssistantMessageEvent:
 
 type StreamMessageEvent = TextChunkEvent | UsageChunkEvent | ToolCallChunkEvent | AssistantMessageEvent
 type StreamMessageGenerator = AsyncGenerator[StreamMessageEvent, None]
+
+__all__ = [
+    "StreamMessageEvent",
+    "StreamMessageGenerator",
+    "TextChunkEvent",
+    "UsageChunkEvent",
+    "ToolCallChunkEvent",
+    "AssistantMessageEvent",
+]
