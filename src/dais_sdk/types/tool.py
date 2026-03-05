@@ -4,17 +4,17 @@ from types import MethodType
 from typing import Any, Awaitable, Literal, TypedDict
 from ..logger import logger
 
+
 class _ToolFunctionParameterSchema(TypedDict):
     type: Literal["object"]
     properties: dict[str, Any]
     required: list[str]
+
 class ToolSchema(TypedDict):
     name: str
     description: str
     parameters: _ToolFunctionParameterSchema
-# class ToolSchema(TypedDict):
-#     type: Literal["function"]
-#     function: _ToolFunctionSchema
+
 
 type ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
