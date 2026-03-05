@@ -181,7 +181,7 @@ class OpenAIProvider(BaseProvider):
         self._param_parser = OpenAIProviderParamParser(self._message_parser)
 
     @staticmethod
-    def _extract_thinking_content(message: AssistantMessage) -> AssistantMessage:
+    def _parse_thinking_content(message: AssistantMessage) -> AssistantMessage:
         def match_thinking_content(text: str) -> tuple[str, str | None]:
             pattern = r"<(think|thinking)>(.*?)</\1>"
             match = re.match(pattern, text, re.DOTALL)
@@ -214,7 +214,7 @@ class OpenAIProvider(BaseProvider):
             extra_headers=params.headers,
         )
         message = self._message_parser.to_message(response)
-        return self._extract_thinking_content(message)
+        return self._parse_thinking_content(message)
 
     @override
     async def request_stream(self, params: LlmRequestParams) -> StreamMessageGenerator:
@@ -232,5 +232,5 @@ class OpenAIProvider(BaseProvider):
                 message_collector.collect(normalized)
 
         full_message = message_collector.get_message()
-        full_message = self._extract_thinking_content(full_message)
+        full_message = self._parse_thinking_content(full_message)
         yield AssistantMessageEvent(message=full_message)
