@@ -7,7 +7,7 @@ import pytest
 from dais_sdk.types.request_params import LlmRequestParams
 from dais_sdk.types.exceptions import ToolDoesNotExistError
 from dais_sdk.types.message import UserMessage
-from dais_sdk.types.tool import ToolDef
+from dais_sdk.types.tool import ToolDef, RawToolDef
 from dais_sdk.tool.toolset import python_tool, PythonToolset
 
 
@@ -51,7 +51,6 @@ class TestLlmRequestParamsInit:
         assert params.tools is None
         assert params.toolsets is None
         assert params.tool_choice == "auto"
-        assert params.execute_tools is False
         assert params.timeout_sec is None
         assert params.temperature is None
         assert params.max_tokens is None
@@ -71,7 +70,6 @@ class TestLlmRequestParamsInit:
             temperature=0.7,
             max_tokens=1000,
             tool_choice="required",
-            execute_tools=True,
             headers={"Authorization": "Bearer key"},
             extra_args={"custom_param": "value"}
         )
@@ -79,7 +77,6 @@ class TestLlmRequestParamsInit:
         assert params.temperature == 0.7
         assert params.max_tokens == 1000
         assert params.tool_choice == "required"
-        assert params.execute_tools is True
         assert params.headers == {"Authorization": "Bearer key"}
         assert params.extra_args == {"custom_param": "value"}
 
@@ -320,10 +317,10 @@ class TestFindTool:
 
     def test_find_tool_in_tools_dict(self):
         """Test find_tool locates tool in dict-based tools list"""
-        raw_tool = {
+        raw_tool: RawToolDef = {
             "name": "search_data",
             "description": "Search data",
-            "parameters": {"type": "object", "properties": {}},
+            "parameters": {"type": "object", "properties": {}, "required": []},
         }
 
         params = LlmRequestParams(
