@@ -1,7 +1,8 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, TextChunk
+from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage
+from dais_sdk.types.event import AssistantMessageEvent, TextChunkEvent
 
 load_dotenv()
 
@@ -10,16 +11,14 @@ llm = LLM(provider=LlmProviders.OPENAI,
           base_url=os.getenv("BASE_URL", ""))
 
 async def main():
-    message_chunk, full_message_queue = await llm.stream_text(
+    async for chunk in llm.stream_text(
         LlmRequestParams(
             model="deepseek-v3.1",
-            messages=[UserMessage(content="Hello world")]))
-    async for chunk in message_chunk:
+            messages=[UserMessage(content="Hello world")])):
         match chunk:
-            case TextChunk(content=content):
-                print(content, end="")
-    print()
-
-    print("Full message: ", await full_message_queue.get())
+            case TextChunkEvent(content=content):
+                print("[Message chunk]: ", content)
+            case AssistantMessageEvent(message=message):
+                print("[Full message]: ", message)
 
 asyncio.run(main())

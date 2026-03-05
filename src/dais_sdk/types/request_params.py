@@ -12,7 +12,6 @@ class LlmRequestParams:
     tools: list[ToolLike] | None = None
     toolsets: list[Toolset] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
-    execute_tools: bool = False
 
     timeout_sec: float | None = None
     temperature: float | None = None

@@ -1,7 +1,7 @@
 [project]
 name = "dais-sdk"
 authors = [{ name = "BHznJNs", email = "bhznjns@outlook.com" }]
-description = "A wrapper of LiteLLM"
+description = "A LLM Agent Meta Framework"
 readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -14,7 +14,7 @@ requires-python = ">=3.14"
 version = "0.7.5"
 
 dependencies = [
-    "litellm>=1.81.0",
+    "openai>=2.24.0",
     "pydantic>=2.0.0",
 
     # MCP client dependencies

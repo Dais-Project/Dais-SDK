@@ -1,35 +1,36 @@
+import asyncio
 import os
 from dotenv import load_dotenv
-from dais_sdk import LLM, LlmProviders, LlmRequestParams, UserMessage, TextChunk
+from dais_sdk import LLM, OpenAIProvider, LlmRequestParams, UserMessage
+from dais_sdk.types.event import TextChunkEvent, AssistantMessageEvent, ToolCallChunkEvent
 
 load_dotenv()
 
-def example_tool():
+def get_weather(city: str):
     """
-    This is a test tool that is used to test the tool calling functionality.
+    Get the weather in a city.
     """
-    print("The example tool is called.")
-    return "Hello World"
+    return f"The weather in {city} is sunny."
 
-llm = LLM(provider=LlmProviders.OPENAI,
-          api_key=os.getenv("API_KEY", ""),
-          base_url=os.getenv("BASE_URL", ""))
+provider = OpenAIProvider(
+    base_url=os.getenv("BASE_URL", ""),
+    api_key=os.getenv("API_KEY", ""))
+llm = LLM(provider=provider)
 
 params = LlmRequestParams(
-        model="deepseek-v3.1",
-        tools=[example_tool],
-        execute_tools=True,
-        messages=[UserMessage(content="Please call the tool example_tool twice.")])
+        model="gpt-5.3-codex",
+        tools=[get_weather],
+        messages=[UserMessage(content="Please tell me the weather in Beijing.")])
 
-print("User: ", "Please call the tool example_tool.")
-stream, full_responses = llm.stream_text_sync(params)
-print("Model: ")
-for chunk in stream:
-    match chunk:
-        case TextChunk(content=content):
-            print(content, flush=True, end="")
-print("\n")
+async def main():
+    async for chunk in llm.stream_text(params):
+        match chunk:
+            case TextChunkEvent(content=content):
+                print(content, flush=True, end="")
+            case ToolCallChunkEvent(id=id, name=name, arguments=arguments, index=index):
+                print(f"\nTool call chunk: {id} {name} {arguments} {index}")
+            case AssistantMessageEvent(message=message):
+                print(f"\nFull message: {message}")
 
-while (response := full_responses.get()) is not None:
-    print("Complete response: ", response)
-print("End of stream.")
+if __name__ == "__main__":
+    asyncio.run(main())
