@@ -1,74 +1,114 @@
 import os
+
 from dotenv import load_dotenv
-from dais_sdk import (LLM, LlmProviders, LlmRequestParams,
-                        UserMessage, SystemMessage, AssistantMessage, ToolMessage)
+
+from dais_sdk import LLM
+from dais_sdk.providers import OpenAIProvider
+from dais_sdk.types.message import ChatMessage, SystemMessage, ToolMessage, UserMessage
+from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.types.tool import ToolLike
 
 load_dotenv()
 
-SYSTEM_PROMPT = "You are a helpful assistant with access to a set of tools. You should call the attempt_completion tool when you have completed your task."
+MODEL = os.getenv("MODEL", "gpt-4o-mini")
+BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
+API_KEY = os.getenv("API_KEY")
+MAX_TURNS = 12
+
+SYSTEM_PROMPT = (
+    "You are a helpful assistant with access to tools. "
+    "When you complete the user task, call attempt_completion()."
+)
+
+if not API_KEY:
+    raise RuntimeError("API_KEY is required.")
+
 
 def read_file(file_path: str) -> str:
-    """
-    Read the content of a file
-    
-    Args:
-        file_path
-        
-    Returns:
-        File content
-    """
+    """Read a UTF-8 text file by file path."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return content
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error: {e}"
 
 
-def agent_loop():
-    def attempt_completion():
-        """
-        When the you have completed your task, you should call this tool to terminate it.
-        """
-        nonlocal is_running
-        is_running = False
-        return "You has completed the task."
-
-    llm = LLM(provider=LlmProviders.OPENAI,
-              api_key=os.getenv("API_KEY", ""),
-              base_url=os.getenv("BASE_URL", ""))
-    
-    test_prompt1 = r"Please read the python script `D:\MyPrograms\python_programs\temp.py` and tell me what it does."
-    messages = [SystemMessage(content=SYSTEM_PROMPT), UserMessage(content=test_prompt1)]
-
-    tools = [read_file, attempt_completion]
-
+def agent_loop() -> None:
     is_running = True
 
-    print(f"User: {test_prompt1}")
-    
-    loop_count = 0
+    def attempt_completion() -> str:
+        """Finish the current task and terminate the agent loop."""
+        nonlocal is_running
+        is_running = False
+        return "Task completed."
 
-    while is_running:
-        loop_count += 1
-        print(f"Loop count: {loop_count}")
+    api_key = API_KEY
+    if api_key is None:
+        raise RuntimeError("API_KEY is required.")
+
+    provider = OpenAIProvider(base_url=BASE_URL, api_key=api_key)
+    llm = LLM(provider)
+
+    target_file = os.getenv("TARGET_FILE", "README.md")
+    user_prompt = (
+        f"请阅读文件 `{target_file}` 的核心内容并总结。"
+        "完成后请调用 attempt_completion。"
+    )
+
+    messages: list[ChatMessage] = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        UserMessage(content=user_prompt),
+    ]
+    tools: list[ToolLike] = [read_file, attempt_completion]
+
+    print("[user]", user_prompt)
+
+    for turn in range(1, MAX_TURNS + 1):
+        if not is_running:
+            break
+
+        print(f"\n=== loop {turn} ===")
 
         params = LlmRequestParams(
-            model="deepseek-v3.1",
+            model=MODEL,
             messages=messages,
             tools=tools,
-            execute_tools=True
+            tool_choice="auto",
         )
 
-        responses = llm.generate_text_sync(params)
-        messages += responses
+        assistant = llm.generate_text_sync(params)
+        messages.append(assistant)
 
-        for message in responses:
-            if isinstance(message, AssistantMessage):
-                print(f"Model: {message.content}")
-            elif isinstance(message, ToolMessage):
-                print(f"Tool: {message.result}")
+        print("[assistant]", assistant.content)
+
+        if not assistant.tool_calls:
+            print("[stop] assistant returned without tool calls.")
+            break
+
+        for tool_call in assistant.tool_calls:
+            tool = params.find_tool(tool_call.name)
+            if tool is None:
+                result, error = None, f"Tool not found: {tool_call.name}"
+            else:
+                result, error = llm.execute_tool_call_sync(tool, tool_call.arguments)
+
+            tool_message = ToolMessage(
+                call_id=tool_call.id,
+                name=tool_call.name,
+                arguments=tool_call.arguments,
+                result=result,
+                error=error,
+            )
+            messages.append(tool_message)
+
+            status = "error" if error else "result"
+            payload = error if error else result
+            print(f"[tool:{tool_call.name}] {status}={payload}")
+    else:
+        print("[stopped] reached MAX_TURNS without completion.")
+
+    print("\nAgent loop terminated.")
+
 
 if __name__ == "__main__":
     agent_loop()
-    print("Agent loop terminated.")
