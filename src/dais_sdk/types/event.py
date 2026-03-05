@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from typing import AsyncGenerator
-from .message import AssistantMessage
+from typing import TYPE_CHECKING, AsyncGenerator
+
+if TYPE_CHECKING:
+    from .message import AssistantMessage
 
 @dataclass
 class TextChunkEvent:

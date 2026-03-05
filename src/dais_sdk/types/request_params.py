@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Any, Literal, Sequence
-from .tool import ToolLike
-from .message import ChatMessage
-from ..tool.toolset import Toolset
-from ..tool.utils import find_tool_by_name
+from typing import Any, Literal, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .tool import ToolLike
+    from ..tool.toolset import Toolset
+    from .message import ChatMessage
 
 @dataclass
 class LlmRequestParams:
@@ -39,6 +40,8 @@ class LlmRequestParams:
         return tools
 
     def find_tool(self, tool_name: str) -> ToolLike | None:
+        from ..tool.utils import find_tool_by_name
+
         has_tool = ((self.tools is not None and len(self.tools) > 0) or
                         (self.toolsets is not None and len(self.toolsets) > 0))
         if not has_tool: return None
