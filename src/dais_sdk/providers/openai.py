@@ -2,6 +2,7 @@ import json
 import re
 from typing import cast, override
 from openai import AsyncOpenAI
+from openai.types.shared_params import FunctionDefinition
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionChunk,
@@ -135,11 +136,15 @@ class OpenAIProviderParamParser(BaseParamParser[
     CompletionCreateParamsNonStreaming,
     CompletionCreateParamsStreaming
 ]):
-    def _preparse_tools(self, params: LlmRequestParams) -> list[ToolSchema] | None:
+    def _preparse_tools(self, params: LlmRequestParams) -> list[ChatCompletionFunctionToolParam] | None:
         extracted_tool_likes = params.extract_tools()
-        if extracted_tool_likes is None:
-            return None
-        return prepare_tools(extracted_tool_likes)
+        if extracted_tool_likes is None: return None
+
+        tool_schemas = prepare_tools(extracted_tool_likes)
+        return [ChatCompletionFunctionToolParam(
+            type="function",
+            function=cast(FunctionDefinition, tool_schema),
+        ) for tool_schema in tool_schemas]
 
     def _preparse_messages(self, params: LlmRequestParams) -> list[ChatCompletionMessageParam]:
         transformed_messages: list[ChatCompletionMessageParam] = []

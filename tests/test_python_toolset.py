@@ -79,10 +79,9 @@ class TestToolsetDecorator:
         decorated_schema = generate_tool_definition_from_callable(decorated_function)
 
         # Verify all fields are identical
-        assert original_schema["type"] == decorated_schema["type"]
-        assert original_schema["function"]["name"] == decorated_schema["function"]["name"]
-        assert original_schema["function"]["description"] == decorated_schema["function"]["description"]
-        assert original_schema["function"]["parameters"] == decorated_schema["function"]["parameters"]
+        assert original_schema["name"] == decorated_schema["name"]
+        assert original_schema["description"] == decorated_schema["description"]
+        assert original_schema["parameters"] == decorated_schema["parameters"]
 
         # Also verify deep equality of the entire schema
         assert original_schema == decorated_schema
@@ -99,10 +98,9 @@ class TestToolsetDecorator:
         original_schema = generate_tool_definition_from_callable(original_function)
         decorated_schema = generate_tool_definition_from_callable(decorated_function)
 
-        assert original_schema["type"] == decorated_schema["type"]
-        assert original_schema["function"]["name"] == decorated_schema["function"]["name"]
-        assert original_schema["function"]["description"] == decorated_schema["function"]["description"]
-        assert original_schema["function"]["parameters"] == decorated_schema["function"]["parameters"]
+        assert original_schema["name"] == decorated_schema["name"]
+        assert original_schema["description"] == decorated_schema["description"]
+        assert original_schema["parameters"] == decorated_schema["parameters"]
         assert original_schema == decorated_schema
 
 
@@ -309,11 +307,9 @@ class TestToolsetIntegration:
         prepared = prepare_tools(tool_methods)
 
         assert len(prepared) == 2
-        assert prepared[0]["type"] == "function"
-        assert prepared[1]["type"] == "function"
 
         # Check tool names
-        names = {t["function"]["name"] for t in prepared}
+        names = {t["name"] for t in prepared}
         assert "MathToolset__add" in names
         assert "MathToolset__multiply" in names
 
@@ -338,7 +334,7 @@ class TestToolsetIntegration:
         prepared = prepare_tools(all_tools)
 
         assert len(prepared) == 2
-        names = {t["function"]["name"] for t in prepared}
+        names = {t["name"] for t in prepared}
         assert names == {"standalone_func", "MyToolset__toolset_method"}
 
 
@@ -462,7 +458,7 @@ class TestToolsetAdvanced:
         prepared = prepare_tools(toolset.get_tools())
 
         assert len(prepared) == 1
-        params = prepared[0]["function"]["parameters"]
+        params = prepared[0]["parameters"]
         assert "items" in params["properties"]
         assert "config" in params["properties"]
         assert params["properties"]["items"]["type"] == "array"
@@ -713,7 +709,7 @@ class TestToolsetEdgeCases:
         # prepare_tools should now work because ToolDef has description (even if empty)
         prepared = prepare_tools(tools)
         assert len(prepared) == 1
-        assert prepared[0]["function"]["description"] == ""
+        assert prepared[0]["description"] == ""
 
 
 class TestNamespacedToolName:

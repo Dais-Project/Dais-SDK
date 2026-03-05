@@ -20,8 +20,8 @@ class TestPrepareTools:
         result = prepare_tools([tool1, tool2])
 
         assert len(result) == 2
-        assert result[0]["function"]["name"] == "tool1"
-        assert result[1]["function"]["name"] == "tool2"
+        assert result[0]["name"] == "tool1"
+        assert result[1]["name"] == "tool2"
 
     # ------------------------------------------------------------------------
     # 3.2 raw definition list
@@ -37,10 +37,7 @@ class TestPrepareTools:
         result = prepare_tools([raw_tool])
 
         assert len(result) == 1
-        assert result[0] == {
-            "type": "function",
-            "function": raw_tool
-        }
+        assert result[0] == raw_tool
 
     # ------------------------------------------------------------------------
     # 3.3 mixed input
@@ -67,10 +64,10 @@ class TestPrepareTools:
         result = prepare_tools([func_tool, tool_def, dict_tool])
 
         assert len(result) == 3
-        assert result[0]["function"]["name"] == "func_tool"
-        assert result[0]["function"]["description"] == "Function tool"
-        assert result[1]["function"]["name"] == "tool_def"
-        assert result[2]["function"]["name"] == "dict_tool"
+        assert result[0]["name"] == "func_tool"
+        assert result[0]["description"] == "Function tool"
+        assert result[1]["name"] == "tool_def"
+        assert result[2]["name"] == "dict_tool"
 
     # ------------------------------------------------------------------------
     # 3.4 empty list

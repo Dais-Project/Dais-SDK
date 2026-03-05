@@ -257,14 +257,11 @@ def generate_tool_definition_from_callable(func: ToolFn) -> ToolSchema:
         raise ValueError(msg)
 
     properties, required = _parse_callable_properties(func)
-    return {
-        "type": "function",
-        "function": {
-            "name": func.__name__,
-            "description": inspect.cleandoc(func.__doc__),
-            "parameters": {"type": "object", "properties": properties, "required": required},
-        },
-    }
+    return ToolSchema(
+        name=func.__name__,
+        description=inspect.cleandoc(func.__doc__),
+        parameters={"type": "object", "properties": properties, "required": required},
+    )
 
 def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> ToolSchema:
     """Convert a ToolDef to OpenAI tools format.
@@ -285,21 +282,14 @@ def generate_tool_definition_from_tool_def(tool_def: ToolDef) -> ToolSchema:
         >>> # Returns OpenAI tools format dict
     """
     properties, required = _parse_callable_properties(tool_def.execute)
-    return {
-        "type": "function",
-        "function": {
-            "name": tool_def.name,
-            "description": tool_def.description,
-            "parameters": (tool_def.parameters or
-                          {"type": "object", "properties": properties, "required": required}),
-        },
-    }
+    return ToolSchema(
+        name=tool_def.name,
+        description=tool_def.description,
+        parameters=tool_def.parameters or {"type": "object", "properties": properties, "required": required},
+    )
 
 def generate_tool_definition_from_raw_tool_def(raw_tool_def: RawToolDef) -> ToolSchema:
-    return {
-        "type": "function",
-        "function": raw_tool_def,
-    }
+    return raw_tool_def
 
 def prepare_tools(tools: Sequence[ToolLike]) -> list[ToolSchema]:
     tool_likes = []

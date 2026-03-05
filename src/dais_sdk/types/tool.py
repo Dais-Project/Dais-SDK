@@ -8,13 +8,13 @@ class _ToolFunctionParameterSchema(TypedDict):
     type: Literal["object"]
     properties: dict[str, Any]
     required: list[str]
-class _ToolFunctionSchema(TypedDict):
+class ToolSchema(TypedDict):
     name: str
     description: str
     parameters: _ToolFunctionParameterSchema
-class ToolSchema(TypedDict):
-    type: Literal["function"]
-    function: _ToolFunctionSchema
+# class ToolSchema(TypedDict):
+#     type: Literal["function"]
+#     function: _ToolFunctionSchema
 
 type ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
@@ -36,7 +36,7 @@ RawToolDef example:
     }
 }
 """
-type RawToolDef = _ToolFunctionSchema
+type RawToolDef = ToolSchema
 
 @dataclasses.dataclass
 class ToolDef:

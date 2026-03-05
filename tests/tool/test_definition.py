@@ -23,13 +23,12 @@ class TestGenerateToolDefinition:
             return f"Hello, {name}!"
 
         result = generate_tool_definition_from_callable(greet)
-        assert result["type"] == "function"
-        assert result["function"]["name"] == "greet"
-        assert result["function"]["description"] == "Greet a person by name"
-        assert result["function"]["parameters"]["type"] == "object"
-        assert "name" in result["function"]["parameters"]["properties"]
-        assert result["function"]["parameters"]["properties"]["name"]["type"] == "string"
-        assert result["function"]["parameters"]["required"] == ["name"]
+        assert result["name"] == "greet"
+        assert result["description"] == "Greet a person by name"
+        assert result["parameters"]["type"] == "object"
+        assert "name" in result["parameters"]["properties"]
+        assert result["parameters"]["properties"]["name"]["type"] == "string"
+        assert result["parameters"]["required"] == ["name"]
 
     def test_function_with_default_params(self):
 
@@ -38,7 +37,7 @@ class TestGenerateToolDefinition:
             return True
 
         result = generate_tool_definition_from_callable(connect)
-        params = result["function"]["parameters"]
+        params = result["parameters"]
         assert params["required"] == ["host"]
         assert "port" in params["properties"]
         assert "timeout" in params["properties"]
@@ -69,13 +68,13 @@ class TestGenerateToolDefinition:
             return {}
 
         result = generate_tool_definition_from_callable(process_data)
-        props = result["function"]["parameters"]["properties"]
+        props = result["parameters"]["properties"]
 
         assert props["items"]["type"] == "array"
         assert props["items"]["items"]["type"] == "string"
         assert props["config"]["type"] == "object"
         assert "options" in props
-        assert result["function"]["parameters"]["required"] == ["items", "config"]
+        assert result["parameters"]["required"] == ["items", "config"]
 
     # ------------------------------------------------------------------------
     # 2.4 skip special parameters
@@ -88,7 +87,7 @@ class TestGenerateToolDefinition:
             pass
 
         result = generate_tool_definition_from_callable(flexible_func)
-        params = result["function"]["parameters"]
+        params = result["parameters"]
 
         assert list(params["properties"].keys()) == ["required"]
         assert params["required"] == ["required"]
@@ -104,11 +103,11 @@ class TestGenerateToolDefinition:
             return param1
 
         result = generate_tool_definition_from_callable(legacy_func)
-        props = result["function"]["parameters"]["properties"]
+        props = result["parameters"]["properties"]
 
         assert props["param1"]["type"] == "string"
         assert props["param2"]["type"] == "string"
-        assert result["function"]["parameters"]["required"] == ["param1"]
+        assert result["parameters"]["required"] == ["param1"]
 
     # ------------------------------------------------------------------------
     # 2.6 multiline docstring
@@ -124,7 +123,7 @@ class TestGenerateToolDefinition:
             return x * 2
 
         result = generate_tool_definition_from_callable(documented_func)
-        assert result["function"]["description"] == "This is a longer docstring.\nIt spans multiple lines."
+        assert result["description"] == "This is a longer docstring.\nIt spans multiple lines."
 
     # ------------------------------------------------------------------------
     # 2.7 Annotated parameter description parsing
@@ -137,7 +136,7 @@ class TestGenerateToolDefinition:
             return query
 
         result = generate_tool_definition_from_callable(search)
-        query_schema = result["function"]["parameters"]["properties"]["query"]
+        query_schema = result["parameters"]["properties"]["query"]
 
         assert query_schema["type"] == "string"
         assert query_schema["description"] == "User search query"
@@ -152,7 +151,7 @@ class TestGenerateToolDefinition:
             return text
 
         result = generate_tool_definition_from_callable(summarize)
-        props = result["function"]["parameters"]["properties"]
+        props = result["parameters"]["properties"]
 
         assert props["text"]["description"] == "Parameter text of type str"
         assert props["language"]["description"] == "Parameter language of type str"
@@ -175,12 +174,11 @@ class TestGenerateToolDefinitionFromToolDef:
 
         result = generate_tool_definition_from_tool_def(tool_def)
 
-        assert result["type"] == "function"
-        assert result["function"]["name"] == "greet_user"
-        assert result["function"]["description"] == "Greet a user by name"
-        assert "name" in result["function"]["parameters"]["properties"]
-        assert result["function"]["parameters"]["properties"]["name"]["type"] == "string"
-        assert result["function"]["parameters"]["required"] == ["name"]
+        assert result["name"] == "greet_user"
+        assert result["description"] == "Greet a user by name"
+        assert "name" in result["parameters"]["properties"]
+        assert result["parameters"]["properties"]["name"]["type"] == "string"
+        assert result["parameters"]["required"] == ["name"]
 
     # ------------------------------------------------------------------------
     # 2.8 ToolDef with default parameters
@@ -198,10 +196,10 @@ class TestGenerateToolDefinitionFromToolDef:
         )
 
         result = generate_tool_definition_from_tool_def(tool_def)
-        params = result["function"]["parameters"]
+        params = result["parameters"]
 
-        assert result["function"]["name"] == "connect_to_server"
-        assert result["function"]["description"] == "Connect to a remote server"
+        assert result["name"] == "connect_to_server"
+        assert result["description"] == "Connect to a remote server"
         assert params["required"] == ["host"]
         assert "port" in params["properties"]
         assert "timeout" in params["properties"]
@@ -224,14 +222,14 @@ class TestGenerateToolDefinitionFromToolDef:
         )
 
         result = generate_tool_definition_from_tool_def(tool_def)
-        props = result["function"]["parameters"]["properties"]
+        props = result["parameters"]["properties"]
 
-        assert result["function"]["name"] == "data_processor"
+        assert result["name"] == "data_processor"
         assert props["items"]["type"] == "array"
         assert props["items"]["items"]["type"] == "string"
         assert props["config"]["type"] == "object"
         assert "options" in props
-        assert result["function"]["parameters"]["required"] == ["items", "config"]
+        assert result["parameters"]["required"] == ["items", "config"]
 
     # ------------------------------------------------------------------------
     # 2.10 ToolDef name and description override
@@ -251,10 +249,10 @@ class TestGenerateToolDefinitionFromToolDef:
         result = generate_tool_definition_from_tool_def(tool_def)
 
         # Should use ToolDef name and description, not function's
-        assert result["function"]["name"] == "custom_name"
-        assert result["function"]["description"] == "Custom description"
+        assert result["name"] == "custom_name"
+        assert result["description"] == "Custom description"
         # But parameters should come from function signature
-        assert "x" in result["function"]["parameters"]["properties"]
+        assert "x" in result["parameters"]["properties"]
 
 class TestGenerateToolDefinitionFromRawToolDef:
     # ------------------------------------------------------------------------
@@ -276,10 +274,8 @@ class TestGenerateToolDefinitionFromRawToolDef:
 
         result = generate_tool_definition_from_raw_tool_def(raw_tool_def)
 
-        assert result["type"] == "function"
-        assert result["function"] == raw_tool_def
-        assert result["function"]["name"] == "get_weather"
-        assert result["function"]["description"] == "Get weather information"
+        assert result["name"] == "get_weather"
+        assert result["description"] == "Get weather information"
 
     # ------------------------------------------------------------------------
     # 2.12 raw tool def with complex parameters
@@ -306,12 +302,11 @@ class TestGenerateToolDefinitionFromRawToolDef:
 
         result = generate_tool_definition_from_raw_tool_def(raw_tool_def)
 
-        assert result["type"] == "function"
-        assert result["function"]["name"] == "search_database"
-        assert "query" in result["function"]["parameters"]["properties"]
-        assert "filters" in result["function"]["parameters"]["properties"]
-        assert "limit" in result["function"]["parameters"]["properties"]
-        assert result["function"]["parameters"]["required"] == ["query"]
+        assert result["name"] == "search_database"
+        assert "query" in result["parameters"]["properties"]
+        assert "filters" in result["parameters"]["properties"]
+        assert "limit" in result["parameters"]["properties"]
+        assert result["parameters"]["required"] == ["query"]
 
     # ------------------------------------------------------------------------
     # 2.13 raw tool def minimal structure
@@ -326,9 +321,8 @@ class TestGenerateToolDefinitionFromRawToolDef:
 
         result = generate_tool_definition_from_raw_tool_def(raw_tool_def)
 
-        assert result["type"] == "function"
-        assert result["function"]["name"] == "simple_tool"
-        assert result["function"]["parameters"]["properties"] == {}
+        assert result["name"] == "simple_tool"
+        assert result["parameters"]["properties"] == {}
 
 
 class TestToolDefExecutes:
