@@ -3,12 +3,14 @@ from typing import Annotated, Any, Optional
 
 import pytest
 
-from dais_sdk.types.tool import ToolDef
+from dais_sdk.types import LlmRequestParams, ToolDef
+from dais_sdk.tool.toolset import PythonToolset, python_tool
 from dais_sdk.tool.prepare import (
     generate_tool_definition_from_callable,
     generate_tool_definition_from_raw_tool_def,
     generate_tool_definition_from_tool_def,
 )
+from dais_sdk.types.message import UserMessage
 
 
 class TestGenerateToolDefinition:
@@ -374,3 +376,12 @@ class TestToolDefExecutes:
         assert tool.executes(base)
         assert tool.executes(wrapped_once)
         assert tool.executes(wrapped_twice)
+
+    def test_executes_with_python_tool_decorator_with_validate(self):
+        class FileSystemToolset(PythonToolset):
+            @python_tool(validate=True)
+            def read_file(self) -> str:
+                ...
+
+        tool = FileSystemToolset().get_tools()[0]
+        assert tool.executes(FileSystemToolset.read_file)

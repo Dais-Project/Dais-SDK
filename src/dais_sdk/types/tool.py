@@ -74,10 +74,10 @@ class ToolDef:
             ```
         """
         def normalize(f: ToolFn) -> ToolFn:
-            if isinstance(f, MethodType):
-                return f.__func__
             while hasattr(f, "__wrapped__"):
                 f = getattr(f, "__wrapped__")
+            if isinstance(f, MethodType):
+                return f.__func__
             return f
         return normalize(self.execute) is normalize(fn)
 
