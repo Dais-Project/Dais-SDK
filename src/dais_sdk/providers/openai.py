@@ -1,11 +1,15 @@
 import json
 import re
-from typing import cast, override
+from typing import Literal, cast, override
 from openai import AsyncOpenAI
 from openai.types.shared_params import FunctionDefinition
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionChunk,
+    ChatCompletionContentPartImageParam,
+    ChatCompletionContentPartInputAudioParam,
+    ChatCompletionContentPartParam,
+    ChatCompletionContentPartTextParam,
     ChatCompletionFunctionToolParam,
     ChatCompletionMessageFunctionToolCallParam,
     ChatCompletionMessageParam,
@@ -19,8 +23,9 @@ from openai.types.chat.completion_create_params import CompletionCreateParamsNon
 from .base_provider import BaseProvider, BaseMessageParser, BaseParamParser
 from .utils import StreamMessageCollector
 from ..tool.prepare import prepare_tools
+from ..types.attachment import Attachment, AudioAttachment, ImageAttachment
+from ..types.exceptions import AttachmentTypeNotSupportedError
 from ..types.request_params import LlmRequestParams
-from ..types.tool import ToolSchema
 from ..types.message import ChatMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
 from ..types.event import AssistantMessageEvent, StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 
@@ -30,6 +35,30 @@ class OpenAIProviderMessageParser(BaseMessageParser[
     ChatCompletion,
     ChatCompletionMessageParam,
 ]):
+    @staticmethod
+    def _attachment_to_content_part(attachment: Attachment) -> ChatCompletionContentPartParam:
+        match attachment:
+            case ImageAttachment() if attachment.source.type == "url":
+                return ChatCompletionContentPartImageParam(
+                    type="image_url",
+                    image_url={"url": attachment.source.url,
+                               "detail": "auto"})
+            case ImageAttachment() if attachment.source.type == "base64":
+                return ChatCompletionContentPartImageParam(
+                    type="image_url",
+                    image_url={"url": f"data:{attachment.source.mime_type};base64,{attachment.source.data}",
+                               "detail": "auto"})
+            case AudioAttachment() if attachment.source.type == "base64":
+                extname = attachment.source.mime_type.split("/")[-1]
+                if extname not in ["mp3", "wav"]:
+                    raise AttachmentTypeNotSupportedError(f"audio/{extname}")
+                return ChatCompletionContentPartInputAudioParam(
+                    type="input_audio",
+                    input_audio={"data": attachment.source.data,
+                                 "format": cast(Literal["mp3", "wav"], extname)})
+            case _:
+                raise AttachmentTypeNotSupportedError(attachment.type)
+
     @override
     @staticmethod
     def normalize_chunk(chunk: ChatCompletionChunk) -> list[TextChunkEvent | ToolCallChunkEvent | UsageChunkEvent] | None:
@@ -93,10 +122,20 @@ class OpenAIProviderMessageParser(BaseMessageParser[
                     role=message.role,
                     content=message.content,
                 )
-            case UserMessage():
+            case UserMessage() if message.attachments is None:
                 return ChatCompletionUserMessageParam(
                     role=message.role,
                     content=message.content,
+                )
+            case UserMessage() if message.attachments is not None:
+                attachment_contents = [OpenAIProviderMessageParser._attachment_to_content_part(attachment)
+                                      for attachment in message.attachments]
+                return ChatCompletionUserMessageParam(
+                    role=message.role,
+                    content=[
+                        ChatCompletionContentPartTextParam(text=message.content, type="text"),
+                        *attachment_contents
+                    ],
                 )
             case AssistantMessage():
                 message_param = ChatCompletionAssistantMessageParam(

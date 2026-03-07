@@ -3,6 +3,7 @@ import uuid
 from abc import ABC
 from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from .attachment import Attachment
 
 class ChatMessage(BaseModel, ABC):
     model_config = ConfigDict(
@@ -18,14 +19,6 @@ class SystemMessage(ChatMessage):
 
     content: str
     role: Literal["system"] = "system"
-
-class UserMessage(ChatMessage):
-    model_config = ConfigDict(json_schema_extra={
-        "required": ["content", "role"]
-    })
-
-    content: str
-    role: Literal["user"] = "user"
 
 class ToolMessage(ChatMessage):
     model_config = ConfigDict(json_schema_extra={
@@ -103,6 +96,15 @@ class AssistantMessage(ChatMessage):
                 result=None,
                 error=None))
         return results
+
+class UserMessage(ChatMessage):
+    model_config = ConfigDict(json_schema_extra={
+        "required": ["content", "role"]
+    })
+
+    content: str
+    attachments: list[Attachment] | None = None
+    role: Literal["user"] = "user"
 
 __all__ = [
     "ChatMessage",
