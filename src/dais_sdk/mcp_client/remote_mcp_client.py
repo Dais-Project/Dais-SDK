@@ -120,7 +120,7 @@ class RemoteMcpClient(McpClient):
                 ClientSession(read_stream, write_stream)
             )
             await self._session.initialize()
-        except Exception:
+        except BaseException:
             await self.disconnect()
             raise
 
