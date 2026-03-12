@@ -1,11 +1,11 @@
 from dataclasses import replace
-from typing import override
+from typing import cast, override
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
 from .toolset import Toolset
 from ...mcp_client.base_mcp_client import McpClient, Tool, ToolResult
 from ...mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
 from ...mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
-from ...types.tool import ToolDef
+from ...types.tool import ToolDef, ToolFunctionParameterSchema
 from ...logger import logger
 
 class McpToolset(Toolset):
@@ -21,7 +21,7 @@ class McpToolset(Toolset):
         tool_def = ToolDef(
             name=mcp_tool.name,
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
-            parameters=mcp_tool.inputSchema,
+            parameters=cast(ToolFunctionParameterSchema, mcp_tool.inputSchema),
             execute=wrapper
         )
         return tool_def
@@ -77,10 +77,15 @@ class McpToolset(Toolset):
     def name(self) -> str:
         return self._client.name
 
+    @property
+    def connected(self) -> bool:
+        return self._tools_cache is not None
+
     @override
     def get_tools(self, namespaced_tool_name: bool = True) -> list[ToolDef]:
-        if self._tools_cache is None:
+        if not self.connected:
             raise RuntimeError(f"Not connected to MCP server. Call await {self.__class__.__name__}(...).connect() first")
+        assert self._tools_cache is not None
         if not namespaced_tool_name:
             return list(self._tools_cache)
         return [replace(tool, name=self.format_tool_name(tool.name)) for tool in self._tools_cache]

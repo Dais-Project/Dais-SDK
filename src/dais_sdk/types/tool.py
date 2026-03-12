@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Literal, TypedDict
 from ..logger import logger
 
 
-class _ToolFunctionParameterSchema(TypedDict):
+class ToolFunctionParameterSchema(TypedDict):
     type: Literal["object"]
     properties: dict[str, Any]
     required: list[str]
@@ -13,7 +13,7 @@ class _ToolFunctionParameterSchema(TypedDict):
 class ToolSchema(TypedDict):
     name: str
     description: str
-    parameters: _ToolFunctionParameterSchema
+    parameters: ToolFunctionParameterSchema
 
 
 type ToolFn = Callable[..., Any] | Callable[..., Awaitable[Any]]
@@ -43,7 +43,7 @@ class ToolDef:
     name: str
     description: str
     execute: ToolFn
-    parameters: _ToolFunctionParameterSchema | None = None
+    parameters: ToolFunctionParameterSchema | None = None
     metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
     defaults: Mapping[str, Any] = dataclasses.field(default_factory=dict)
 
