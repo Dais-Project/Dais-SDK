@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 class LlmRequestParams:
     model: str
     messages: Sequence[ChatMessage]
+    instructions: str | None = None
     tools: list[ToolLike] | None = None
     toolsets: list[Toolset] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"

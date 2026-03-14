@@ -35,6 +35,24 @@ def test_parse_nonstream_maps_core_fields_and_extra_args() -> None:
     assert messages[0]["content"] == "hello"
 
 
+def test_parse_nonstream_includes_instructions_as_system_message() -> None:
+    parser = _build_parser()
+    params = LlmRequestParams(
+        model="gpt-4o-mini",
+        messages=[UserMessage(content="hello")],
+        instructions="Follow policy",
+    )
+
+    parsed = cast(dict[str, Any], parser.parse_nonstream(params))
+
+    messages = cast(list[dict[str, Any]], parsed["messages"])
+    assert len(messages) == 2
+    assert messages[0]["role"] == "system"
+    assert messages[0]["content"] == "Follow policy"
+    assert messages[1]["role"] == "user"
+    assert messages[1]["content"] == "hello"
+
+
 def test_parse_nonstream_without_tools_does_not_inject_tools_key() -> None:
     parser = _build_parser()
     params = LlmRequestParams(

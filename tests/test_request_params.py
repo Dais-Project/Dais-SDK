@@ -56,6 +56,7 @@ class TestLlmRequestParamsInit:
         assert params.max_tokens is None
         assert params.headers is None
         assert params.extra_args is None
+        assert params.instructions is None
 
     # ------------------------------------------------------------------------
     # 1.3 Test optional fields setting
@@ -67,6 +68,7 @@ class TestLlmRequestParamsInit:
         params = LlmRequestParams(
             model="gpt-4",
             messages=messages,
+            instructions="Follow policy",
             temperature=0.7,
             max_tokens=1000,
             tool_choice="required",
@@ -74,6 +76,7 @@ class TestLlmRequestParamsInit:
             extra_args={"custom_param": "value"}
         )
 
+        assert params.instructions == "Follow policy"
         assert params.temperature == 0.7
         assert params.max_tokens == 1000
         assert params.tool_choice == "required"

@@ -187,6 +187,11 @@ class OpenAIProviderParamParser(BaseParamParser[
 
     def _preparse_messages(self, params: LlmRequestParams) -> list[ChatCompletionMessageParam]:
         transformed_messages: list[ChatCompletionMessageParam] = []
+        if params.instructions is not None:
+            transformed_messages.append(ChatCompletionSystemMessageParam(
+                role="system",
+                content=params.instructions,
+            ))
         for message in params.messages:
             if (type(message) is ToolMessage and not message.is_complete):
                 continue
