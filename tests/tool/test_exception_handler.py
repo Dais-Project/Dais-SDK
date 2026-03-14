@@ -2,13 +2,13 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
-from dais_sdk.tool.execute import ToolExceptionHandlerManager
-from dais_sdk.types.exceptions import (
+from dais_sdk.tool.tool_call_executor import ToolExceptionHandlerManager
+from dais_sdk.types import (
+    ToolDef,
     ToolDoesNotExistError,
     ToolArgumentDecodeError,
     ToolExecutionError,
 )
-from dais_sdk.types.tool import ToolDef
 
 
 class TestToolExceptionHandlerManager:
@@ -222,7 +222,7 @@ class TestToolExceptionHandlerManager:
 
         exception = ToolDoesNotExistError("unknown_tool")
 
-        with patch("dais_sdk.tool.execute.logger") as mock_logger:
+        with patch("dais_sdk.tool.tool_call_executor.logger") as mock_logger:
             result = manager.handle(exception)
 
             mock_logger.warning.assert_called_once()
@@ -237,7 +237,7 @@ class TestToolExceptionHandlerManager:
 
         exception = ToolDoesNotExistError("unknown_tool")
 
-        with patch("dais_sdk.tool.execute.logger"):
+        with patch("dais_sdk.tool.tool_call_executor.logger"):
             result = manager.handle(exception)
 
         assert "Unhandled tool exception" in result
@@ -254,7 +254,7 @@ class TestToolExceptionHandlerManager:
             execute=lambda x: x,
         )
 
-        with patch("dais_sdk.tool.execute.logger"):
+        with patch("dais_sdk.tool.tool_call_executor.logger"):
             # ToolDoesNotExistError
             not_exist = ToolDoesNotExistError("tool1")
             result1 = manager.handle(not_exist)

@@ -1,56 +1,18 @@
 import asyncio
-import json
 from typing import TYPE_CHECKING
 from collections.abc import Generator
-from .tool.execute import ToolExceptionHandlerManager, execute_tool
-from .tool.utils import get_tool_name
-from .types import ToolArgumentDecodeError, ToolExecutionError
 from .logger import enable_logging
 
 if TYPE_CHECKING:
     from .providers import BaseProvider
     from .types import (
-        LlmRequestParams, AssistantMessage, ToolLike,
-        StreamMessageEvent, StreamMessageGenerator
+        LlmRequestParams, StreamMessageGenerator,
+        StreamMessageEvent, AssistantMessage,
     )
 
 class LLM:
     def __init__(self, provider: BaseProvider):
         self._provider = provider
-        self._tool_exception_handler_manager = ToolExceptionHandlerManager()
-
-    @property
-    def tool_exception_handler_manager(self) -> ToolExceptionHandlerManager:
-        return self._tool_exception_handler_manager
-
-    async def execute_tool_call(self,
-                                tool: ToolLike,
-                                arguments: str | dict) -> tuple[str | None, str | None]:
-        """
-        Returns:
-            A tuple of (result, error)
-        """
-        result, error = None, None
-        try:
-            result = await execute_tool(tool, arguments)
-        except json.JSONDecodeError as e:
-            assert type(arguments) is str
-            _error = ToolArgumentDecodeError(get_tool_name(tool), arguments, e)
-            error = self._tool_exception_handler_manager.handle(_error)
-        except Exception as e:
-            _error = ToolExecutionError(tool, arguments, e)
-            error = self._tool_exception_handler_manager.handle(_error)
-        return result, error
-
-    def execute_tool_call_sync(self,
-                               tool: ToolLike,
-                               arguments: str | dict
-                               ) -> tuple[str | None, str | None]:
-        """
-        Synchronous wrapper of `execute_tool_call`.
-        """
-        return asyncio.run(self.execute_tool_call(tool, arguments))
-
 
     async def list_models(self) -> list[str]:
         return await self._provider.list_models()
