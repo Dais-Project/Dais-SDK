@@ -3,14 +3,16 @@ import os
 from dotenv import load_dotenv
 
 from dais_sdk import LLM
+from dais_sdk.tool import ToolCallExecutor
 from dais_sdk.providers import OpenAIProvider
-from dais_sdk.types.message import ChatMessage, SystemMessage, ToolMessage, UserMessage
-from dais_sdk.types.request_params import LlmRequestParams
-from dais_sdk.types.tool import ToolLike
+from dais_sdk.types import (
+    LlmRequestParams,
+    ToolLike,
+    ChatMessage, ToolMessage, UserMessage,
+)
 
 load_dotenv()
 
-MODEL = os.getenv("MODEL", "gpt-4o-mini")
 BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY")
 MAX_TURNS = 12
@@ -48,6 +50,7 @@ def agent_loop() -> None:
 
     provider = OpenAIProvider(base_url=BASE_URL, api_key=api_key)
     llm = LLM(provider)
+    executor = ToolCallExecutor()
 
     target_file = os.getenv("TARGET_FILE", "README.md")
     user_prompt = (
@@ -55,10 +58,7 @@ def agent_loop() -> None:
         "完成后请调用 attempt_completion。"
     )
 
-    messages: list[ChatMessage] = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        UserMessage(content=user_prompt),
-    ]
+    messages: list[ChatMessage] = [UserMessage(content=user_prompt)]
     tools: list[ToolLike] = [read_file, attempt_completion]
 
     print("[user]", user_prompt)
@@ -70,8 +70,9 @@ def agent_loop() -> None:
         print(f"\n=== loop {turn} ===")
 
         params = LlmRequestParams(
-            model=MODEL,
+            model="deepseek-v3.1",
             messages=messages,
+            instructions=SYSTEM_PROMPT,
             tools=tools,
             tool_choice="auto",
         )
@@ -82,7 +83,7 @@ def agent_loop() -> None:
         print("[assistant]", assistant.content)
 
         if not assistant.tool_calls:
-            print("[stop] assistant returned without tool calls.")
+            print("[log] assistant returned without tool calls.")
             break
 
         for tool_call in assistant.tool_calls:
@@ -90,7 +91,7 @@ def agent_loop() -> None:
             if tool is None:
                 result, error = None, f"Tool not found: {tool_call.name}"
             else:
-                result, error = llm.execute_tool_call_sync(tool, tool_call.arguments)
+                result, error = executor.execute_sync(tool, tool_call.arguments)
 
             tool_message = ToolMessage(
                 call_id=tool_call.id,
