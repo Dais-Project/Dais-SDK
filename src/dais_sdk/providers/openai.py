@@ -178,7 +178,7 @@ class OpenAIProviderMessageParser(BaseMessageParser[
                     tool_call_id=message.call_id,
                 )
             case _:
-                raise NotImplementedError
+                raise NotImplementedError(f"Unsupported message type: {type(message)}")
 
 class OpenAIProviderParamParser(BaseParamParser[
     CompletionCreateParamsNonStreaming,
@@ -210,6 +210,7 @@ class OpenAIProviderParamParser(BaseParamParser[
 
     @override
     def parse_nonstream(self, params: LlmRequestParams) -> CompletionCreateParamsNonStreaming:
+        assert params.model is not None
         result_params = CompletionCreateParamsNonStreaming(
             model=params.model,
             messages=self._preparse_messages(params),

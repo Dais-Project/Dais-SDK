@@ -3,25 +3,22 @@ import os
 from dotenv import load_dotenv
 
 from dais_sdk import LLM
-from dais_sdk.providers import OpenAIProvider
-from dais_sdk.types.message import UserMessage
-from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.providers import LlmProviders
+from dais_sdk.types import LlmRequestParams, UserMessage
 
 load_dotenv()
 
-MODEL = os.getenv("MODEL", "gpt-4o-mini")
 BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY")
 
 if not API_KEY:
     raise RuntimeError("API_KEY is required.")
 
-provider = OpenAIProvider(base_url=BASE_URL, api_key=API_KEY)
-llm = LLM(provider)
+provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
+llm = LLM("deepseek-v3.1", provider)
 
 response = llm.generate_text_sync(
     LlmRequestParams(
-        model=MODEL,
         messages=[UserMessage(content="你好，请用一句话介绍 Dais-SDK。")],
     )
 )

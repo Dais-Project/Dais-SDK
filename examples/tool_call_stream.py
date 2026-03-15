@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 from dais_sdk import LLM
-from dais_sdk.providers import OpenAIProvider
+from dais_sdk.providers import LlmProviders
 from dais_sdk.tool import ToolCallExecutor
 from dais_sdk.types.event import (
     AssistantMessageEvent,
@@ -18,7 +18,6 @@ from dais_sdk.types.tool import ToolLike
 
 load_dotenv()
 
-MODEL = os.getenv("MODEL", "gpt-4o-mini")
 BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY")
 MAX_TURNS = 8
@@ -37,8 +36,8 @@ def get_time(city: str) -> str:
     return f"{city} 当前本地时间是 10:00。"
 
 
-provider = OpenAIProvider(base_url=BASE_URL, api_key=API_KEY)
-llm = LLM(provider)
+provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
+llm = LLM("deepseek-v3.1", provider)
 
 
 async def stream_one_turn(params: LlmRequestParams) -> AssistantMessage:
@@ -75,7 +74,6 @@ async def main() -> None:
     for turn in range(1, MAX_TURNS + 1):
         print(f"\n=== turn {turn} ===")
         params = LlmRequestParams(
-            model=MODEL,
             messages=messages,
             tools=tools,
             tool_choice="auto",

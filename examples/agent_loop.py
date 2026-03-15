@@ -3,8 +3,8 @@ import os
 from dotenv import load_dotenv
 
 from dais_sdk import LLM
+from dais_sdk.providers import LlmProviders
 from dais_sdk.tool import ToolCallExecutor
-from dais_sdk.providers import OpenAIProvider
 from dais_sdk.types import (
     LlmRequestParams,
     ToolLike,
@@ -26,6 +26,8 @@ if not API_KEY:
     raise RuntimeError("API_KEY is required.")
 
 
+provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
+
 def read_file(file_path: str) -> str:
     """Read a UTF-8 text file by file path."""
     try:
@@ -33,7 +35,6 @@ def read_file(file_path: str) -> str:
             return f.read()
     except Exception as e:
         return f"Error: {e}"
-
 
 def agent_loop() -> None:
     is_running = True
@@ -44,20 +45,13 @@ def agent_loop() -> None:
         is_running = False
         return "Task completed."
 
-    api_key = API_KEY
-    if api_key is None:
-        raise RuntimeError("API_KEY is required.")
-
-    provider = OpenAIProvider(base_url=BASE_URL, api_key=api_key)
-    llm = LLM(provider)
+    llm = LLM("deepseek-v3.1", provider)
     executor = ToolCallExecutor()
 
     target_file = os.getenv("TARGET_FILE", "README.md")
     user_prompt = (
-        f"请阅读文件 `{target_file}` 的核心内容并总结。"
-        "完成后请调用 attempt_completion。"
+        f"请阅读文件 `{target_file}` 的核心内容并进行总结。完成后请调用 attempt_completion 工具。"
     )
-
     messages: list[ChatMessage] = [UserMessage(content=user_prompt)]
     tools: list[ToolLike] = [read_file, attempt_completion]
 
@@ -70,7 +64,6 @@ def agent_loop() -> None:
         print(f"\n=== loop {turn} ===")
 
         params = LlmRequestParams(
-            model="deepseek-v3.1",
             messages=messages,
             instructions=SYSTEM_PROMPT,
             tools=tools,
@@ -104,7 +97,7 @@ def agent_loop() -> None:
 
             status = "error" if error else "result"
             payload = error if error else result
-            print(f"[tool:{tool_call.name}] {status}={payload}")
+            print(f"[tool:{tool_call.name}] {status}=\n{payload}")
     else:
         print("[stopped] reached MAX_TURNS without completion.")
 

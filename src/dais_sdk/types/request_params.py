@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class LlmRequestParams:
-    model: str
     messages: Sequence[ChatMessage]
+    model: str | None = None
     instructions: str | None = None
     tools: list[ToolLike] | None = None
     toolsets: list[Toolset] | None = None

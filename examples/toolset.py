@@ -4,14 +4,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dais_sdk import LLM
-from dais_sdk.providers import OpenAIProvider
-from dais_sdk.tool.toolset import PythonToolset, python_tool
-from dais_sdk.types.message import ChatMessage, ToolMessage, UserMessage
-from dais_sdk.types.request_params import LlmRequestParams
+from dais_sdk.providers import LlmProviders
+from dais_sdk.tool import ToolCallExecutor, PythonToolset, python_tool
+from dais_sdk.types import LlmRequestParams, ChatMessage, ToolMessage, UserMessage
+
 
 load_dotenv()
 
-MODEL = os.getenv("MODEL", "gpt-4o-mini")
 BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
 API_KEY = os.getenv("API_KEY")
 MAX_TURNS = 8
@@ -38,20 +37,17 @@ class FileSystem(PythonToolset):
     @python_tool
     def write_file(self, path: str, content: str) -> str:
         """Write UTF-8 content to a file under current working directory."""
-        target = self._resolve(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
-        return f"written: {target}"
+        ...
 
     @python_tool
     def list_files(self, path: str = ".") -> list[str]:
         """List files and directories under a directory."""
-        target = self._resolve(path)
-        return sorted(item.name for item in target.iterdir())
+        ...
 
 
-provider = OpenAIProvider(base_url=BASE_URL, api_key=API_KEY)
-llm = LLM(provider)
+provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
+llm = LLM("deepseek-v3.1", provider)
+tool_call_executor = ToolCallExecutor()
 
 messages: list[ChatMessage] = [
     UserMessage(
@@ -66,7 +62,6 @@ for turn in range(1, MAX_TURNS + 1):
     print(f"\n=== turn {turn} ===")
 
     params = LlmRequestParams(
-        model=MODEL,
         messages=messages,
         toolsets=[FileSystem()],
         tool_choice="auto",
@@ -85,7 +80,7 @@ for turn in range(1, MAX_TURNS + 1):
         if tool is None:
             result, error = None, f"Tool not found: {tool_call.name}"
         else:
-            result, error = llm.execute_tool_call_sync(tool, tool_call.arguments)
+            result, error = tool_call_executor.execute_sync(tool, tool_call.arguments)
 
         tool_message = ToolMessage(
             call_id=tool_call.id,
