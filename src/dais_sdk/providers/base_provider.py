@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ..types.message import AssistantMessage, ChatMessage
+from ..types.message import AssistantMessage, BaseMessage
 from ..types.event import StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 from ..types.request_params import LlmRequestParams
 
@@ -15,7 +15,7 @@ class BaseMessageParser[TChunk, TNonStreamResponse, TProviderMessage](ABC):
 
     @staticmethod
     @abstractmethod
-    def from_message(message: ChatMessage) -> TProviderMessage: ...
+    def from_message(message: BaseMessage) -> TProviderMessage: ...
 
 class BaseParamParser[TNonStreamParams, TStreamParams](ABC):
     def __init__(self, message_parser: BaseMessageParser):

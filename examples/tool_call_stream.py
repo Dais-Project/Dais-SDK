@@ -6,15 +6,12 @@ from dotenv import load_dotenv
 from dais_sdk import LLM
 from dais_sdk.providers import LlmProviders
 from dais_sdk.tool import ToolCallExecutor
-from dais_sdk.types.event import (
-    AssistantMessageEvent,
-    TextChunkEvent,
-    ToolCallChunkEvent,
-    UsageChunkEvent,
+from dais_sdk.types import (
+    LlmRequestParams, ToolLike,
+    AssistantMessageEvent, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent,
+    BaseMessage, AssistantMessage, ToolMessage, UserMessage
 )
-from dais_sdk.types.message import AssistantMessage, ChatMessage, ToolMessage, UserMessage
-from dais_sdk.types.request_params import LlmRequestParams
-from dais_sdk.types.tool import ToolLike
+
 
 load_dotenv()
 
@@ -65,7 +62,7 @@ async def stream_one_turn(params: LlmRequestParams) -> AssistantMessage:
 
 
 async def main() -> None:
-    messages: list[ChatMessage] = [
+    messages: list[BaseMessage] = [
         UserMessage(content="请先调用工具查询北京天气和时间，再给我一段简短行程建议。"),
     ]
     tools: list[ToolLike] = [get_weather, get_time]

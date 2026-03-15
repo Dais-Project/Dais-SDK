@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from dais_sdk import LLM
 from dais_sdk.providers import LlmProviders
 from dais_sdk.tool import ToolCallExecutor, PythonToolset, python_tool
-from dais_sdk.types import LlmRequestParams, ChatMessage, ToolMessage, UserMessage
+from dais_sdk.types import LlmRequestParams, BaseMessage, ToolMessage, UserMessage
 
 
 load_dotenv()
@@ -49,7 +49,7 @@ provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
 llm = LLM("deepseek-v3.1", provider)
 tool_call_executor = ToolCallExecutor()
 
-messages: list[ChatMessage] = [
+messages: list[BaseMessage] = [
     UserMessage(
         content=(
             "请先调用 FileSystem 工具读取 README.md 的前几行，"

@@ -5,14 +5,14 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .attachment import Attachment
 
-class ChatMessage(BaseModel, ABC):
+class BaseMessage(BaseModel, ABC):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
-class SystemMessage(ChatMessage):
+class SystemMessage(BaseMessage):
     model_config = ConfigDict(json_schema_extra={
         "required": ["content", "role"]
     })
@@ -20,7 +20,7 @@ class SystemMessage(ChatMessage):
     content: str
     role: Literal["system"] = "system"
 
-class ToolMessage(ChatMessage):
+class ToolMessage(BaseMessage):
     model_config = ConfigDict(json_schema_extra={
         "required": ["call_id", "name", "arguments", "result", "error", "role", "metadata"]
     })
@@ -51,7 +51,7 @@ class ToolMessage(ChatMessage):
             result=result,
             error=error)
 
-class AssistantMessage(ChatMessage):
+class AssistantMessage(BaseMessage):
     class ToolCall(BaseModel):
         id: str
         name: str
@@ -97,7 +97,7 @@ class AssistantMessage(ChatMessage):
                 error=None))
         return results
 
-class UserMessage(ChatMessage):
+class UserMessage(BaseMessage):
     model_config = ConfigDict(json_schema_extra={
         "required": ["content", "role"]
     })
@@ -107,7 +107,7 @@ class UserMessage(ChatMessage):
     role: Literal["user"] = "user"
 
 __all__ = [
-    "ChatMessage",
+    "BaseMessage",
     "SystemMessage",
     "UserMessage",
     "AssistantMessage",

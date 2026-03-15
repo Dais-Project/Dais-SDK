@@ -5,11 +5,11 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from .tool import ToolLike
     from ..tool.toolset import Toolset
-    from .message import ChatMessage
+    from .message import BaseMessage
 
 @dataclass
 class LlmRequestParams:
-    messages: Sequence[ChatMessage]
+    messages: Sequence[BaseMessage]
     model: str | None = None
     instructions: str | None = None
     tools: list[ToolLike] | None = None

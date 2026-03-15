@@ -28,7 +28,7 @@ from ..tool.prepare import prepare_tools
 from ..types.attachment import Attachment, AudioAttachment, ImageAttachment
 from ..types.exceptions import AttachmentTypeNotSupportedError
 from ..types.request_params import LlmRequestParams
-from ..types.message import ChatMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
+from ..types.message import BaseMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
 from ..types.event import AssistantMessageEvent, StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 
 
@@ -124,7 +124,7 @@ class OpenAIProviderMessageParser(BaseMessageParser[
 
     @override
     @staticmethod
-    def from_message(message: ChatMessage) -> ChatCompletionMessageParam:
+    def from_message(message: BaseMessage) -> ChatCompletionMessageParam:
         match message:
             case SystemMessage():
                 return ChatCompletionSystemMessageParam(

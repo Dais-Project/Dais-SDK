@@ -28,9 +28,6 @@ class TestLlmRequestParamsInit:
 
     def test_init_single_message(self):
         """Test that a single message object is accepted (if supported) or list is required"""
-        # If the type hint requires list, we must pass list.
-        # If the implementation accepts single item, this test would differ.
-        # Based on type hint: list[ChatMessage]
         msg = UserMessage(content="Hello")
         params = LlmRequestParams(model="gpt-4", messages=[msg])
 
@@ -86,9 +83,6 @@ class TestLlmRequestParamsInit:
     def test_init_with_mixed_messages(self):
         """Test initialization with mixed message types"""
         user_msg = UserMessage(content="Hello")
-        # Note: list[UserMessage] is not assignable to list[ChatMessage] due to invariance,
-        # but at runtime it works. We use a workaround or cast if strict.
-        # Here we just ensure the list is passed correctly.
         params = LlmRequestParams(model="test", messages=[user_msg])
         assert len(params.messages) == 1
 

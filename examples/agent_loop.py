@@ -8,7 +8,7 @@ from dais_sdk.tool import ToolCallExecutor
 from dais_sdk.types import (
     LlmRequestParams,
     ToolLike,
-    ChatMessage, ToolMessage, UserMessage,
+    BaseMessage, ToolMessage, UserMessage,
 )
 
 load_dotenv()
@@ -52,7 +52,7 @@ def agent_loop() -> None:
     user_prompt = (
         f"请阅读文件 `{target_file}` 的核心内容并进行总结。完成后请调用 attempt_completion 工具。"
     )
-    messages: list[ChatMessage] = [UserMessage(content=user_prompt)]
+    messages: list[BaseMessage] = [UserMessage(content=user_prompt)]
     tools: list[ToolLike] = [read_file, attempt_completion]
 
     print("[user]", user_prompt)

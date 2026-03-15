@@ -8,7 +8,7 @@ from dais_sdk.tool import ToolCallExecutor
 from dais_sdk.types import (
     LlmRequestParams,
     ToolLike,
-    ChatMessage, ToolMessage, UserMessage
+    BaseMessage, ToolMessage, UserMessage
 )
 
 load_dotenv()
@@ -34,7 +34,7 @@ def get_time(city: str) -> str:
 provider = LLM.create_provider(LlmProviders.OPENAI, BASE_URL, API_KEY)
 llm = LLM("deepseek-v3.1", provider)
 
-messages: list[ChatMessage] = [
+messages: list[BaseMessage] = [
     UserMessage(content="请先调用工具查询北京天气和时间，再给我一段简短行程建议。"),
 ]
 tools: list[ToolLike] = [get_weather, get_time]
