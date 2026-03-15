@@ -31,9 +31,9 @@ class OneTurn[Input=str, Output: BaseModel=Never]:
         return str(input)
 
     @overload
-    async def __call__(self, input: Input) -> str: ...
+    async def __call__(self: OneTurn[Input, Never], input: Input) -> str: ...
     @overload
-    async def __call__(self, input: Input) -> Output: ...
+    async def __call__(self: OneTurn[Input, Output], input: Input) -> Output: ...
     async def __call__(self, input: Input) -> str | Output:
         request = self._create_request(input)
         response = await self._llm.generate_text(request)
@@ -42,8 +42,6 @@ class OneTurn[Input=str, Output: BaseModel=Never]:
 
         if self._output == "text":
             return response.content
-
-        print(response.content)
 
         if self._validate:
             return self._output.model_validate_json(response.content)
