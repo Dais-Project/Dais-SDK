@@ -1,8 +1,8 @@
 import json
 import uuid
 from abc import ABC
-from typing import Any, Literal, Self
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Annotated, Any, Literal, Self
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, field_validator
 from .attachment import Attachment
 
 class BaseMessage(BaseModel, ABC):
@@ -106,8 +106,14 @@ class UserMessage(BaseMessage):
     attachments: list[Attachment] | None = None
     role: Literal["user"] = "user"
 
+type Message = Annotated[
+    UserMessage | AssistantMessage | SystemMessage | ToolMessage,
+    Discriminator("role")
+]
+
 __all__ = [
     "BaseMessage",
+    "Message",
     "SystemMessage",
     "UserMessage",
     "AssistantMessage",
