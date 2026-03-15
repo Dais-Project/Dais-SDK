@@ -20,6 +20,8 @@ from openai.types.chat import (
 )
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.completion_create_params import CompletionCreateParamsNonStreaming, CompletionCreateParamsStreaming
+from pydantic import BaseModel
+from pydantic.json_schema import GenerateJsonSchema
 from .base_provider import BaseProvider, BaseMessageParser, BaseParamParser
 from .utils import StreamMessageCollector
 from ..tool.prepare import prepare_tools
@@ -29,6 +31,12 @@ from ..types.request_params import LlmRequestParams
 from ..types.message import ChatMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
 from ..types.event import AssistantMessageEvent, StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 
+
+class StrictJsonSchema(GenerateJsonSchema):
+    def model_schema(self, schema):
+        result = super().model_schema(schema)
+        result["additionalProperties"] = False
+        return result
 
 class OpenAIProviderMessageParser(BaseMessageParser[
     ChatCompletionChunk,
@@ -87,7 +95,8 @@ class OpenAIProviderMessageParser(BaseMessageParser[
     @override
     @staticmethod
     def to_message(response: ChatCompletion) -> AssistantMessage:
-        if len(response.choices) == 0:
+        if (response.choices is None or # some providers may return choises as None
+            len(response.choices) == 0):
             raise ValueError("Empty response")
 
         usage = response.usage
@@ -209,6 +218,25 @@ class OpenAIProviderParamParser(BaseParamParser[
             max_tokens=params.max_tokens,
             **(params.extra_args or {})
         )
+        match params.output:
+            case "text":
+                result_params["response_format"] = {"type": "text"}
+            case "json":
+                result_params["response_format"] = {"type": "json_object"}
+            case model if issubclass(model, BaseModel):
+                name = model.__name__
+                description = model.__doc__ or ""
+                result_params["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": name,
+                        "description": description,
+                        "strict": True,
+                        "schema": model.model_json_schema(schema_generator=StrictJsonSchema),
+                    }
+                }
+            case _:
+                raise NotImplementedError(f"Unsupported output format: {params.output}")
         if (tools := self._preparse_tools(params)) is not None:
             result_params["tools"] = cast(list[ChatCompletionFunctionToolParam], tools)
         return result_params

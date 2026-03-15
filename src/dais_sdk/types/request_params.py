@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Literal, Sequence, TYPE_CHECKING
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from .tool import ToolLike
@@ -14,6 +15,7 @@ class LlmRequestParams:
     tools: list[ToolLike] | None = None
     toolsets: list[Toolset] | None = None
     tool_choice: Literal["auto", "required", "none"] = "auto"
+    output: Literal["text", "json"] | type[BaseModel] = "text"
 
     timeout_sec: float | None = None
     temperature: float | None = None

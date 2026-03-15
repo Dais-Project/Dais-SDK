@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from dais_sdk import LLM
 from dais_sdk.providers import OpenAIProvider
+from dais_sdk.tool import ToolCallExecutor
 from dais_sdk.types.event import (
     AssistantMessageEvent,
     TextChunkEvent,
@@ -69,6 +70,7 @@ async def main() -> None:
         UserMessage(content="请先调用工具查询北京天气和时间，再给我一段简短行程建议。"),
     ]
     tools: list[ToolLike] = [get_weather, get_time]
+    tool_call_executor = ToolCallExecutor()
 
     for turn in range(1, MAX_TURNS + 1):
         print(f"\n=== turn {turn} ===")
@@ -91,7 +93,7 @@ async def main() -> None:
             if tool is None:
                 result, error = None, f"Tool not found: {tool_call.name}"
             else:
-                result, error = await llm.execute_tool_call(tool, tool_call.arguments)
+                result, error = await tool_call_executor.execute(tool, tool_call.arguments)
 
             tool_message = ToolMessage(
                 call_id=tool_call.id,
