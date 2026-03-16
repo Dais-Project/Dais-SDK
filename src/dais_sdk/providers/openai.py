@@ -21,9 +21,8 @@ from openai.types.chat import (
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.chat.completion_create_params import CompletionCreateParamsNonStreaming, CompletionCreateParamsStreaming
 from pydantic import BaseModel
-from pydantic.json_schema import GenerateJsonSchema
 from .base_provider import BaseProvider, BaseMessageParser, BaseParamParser
-from .utils import StreamMessageCollector
+from .utils import StreamMessageCollector, StrictInlineJsonSchema
 from ..tool.prepare import prepare_tools
 from ..types.attachment import Attachment, AudioAttachment, ImageAttachment
 from ..types.exceptions import AttachmentTypeNotSupportedError
@@ -31,12 +30,6 @@ from ..types.request_params import LlmRequestParams
 from ..types.message import BaseMessage, SystemMessage, UserMessage, AssistantMessage, ToolMessage
 from ..types.event import AssistantMessageEvent, StreamMessageGenerator, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 
-
-class StrictJsonSchema(GenerateJsonSchema):
-    def model_schema(self, schema):
-        result = super().model_schema(schema)
-        result["additionalProperties"] = False
-        return result
 
 class OpenAIProviderMessageParser(BaseMessageParser[
     ChatCompletionChunk,
@@ -233,7 +226,7 @@ class OpenAIProviderParamParser(BaseParamParser[
                         "name": name,
                         "description": description,
                         "strict": True,
-                        "schema": model.model_json_schema(schema_generator=StrictJsonSchema),
+                        "schema": model.model_json_schema(schema_generator=StrictInlineJsonSchema),
                     }
                 }
             case _:

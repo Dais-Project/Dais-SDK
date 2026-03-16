@@ -1,7 +1,36 @@
+import copy
 import dataclasses
 import json
+from typing import Any, override
+from pydantic.json_schema import GenerateJsonSchema
 from ..types.event import TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 from ..types.message import AssistantMessage
+
+
+class StrictInlineJsonSchema(GenerateJsonSchema):
+    @override
+    def model_schema(self, schema):
+        result = super().model_schema(schema)
+        result["additionalProperties"] = False
+        return result
+
+    @override
+    def generate(self, schema, mode="validation"):
+        result = super().generate(schema, mode)
+        return self._resolve_refs(result)
+
+    def _resolve_refs(self, schema: dict[str, Any]) -> dict[str, Any]:
+        defs = schema.get("$defs", {})
+        def resolve(node: Any) -> Any:
+            if isinstance(node, dict):
+                if "$ref" in node:
+                    ref_name = node["$ref"].split("/")[-1]
+                    return resolve(copy.deepcopy(defs[ref_name]))
+                return {k: resolve(v) for k, v in node.items() if k != "$defs"}
+            if isinstance(node, list):
+                return [resolve(item) for item in node]
+            return node
+        return resolve(schema)
 
 
 class ToolCallCollector:
