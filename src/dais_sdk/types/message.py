@@ -43,6 +43,15 @@ class ToolMessage(BaseMessage):
     def is_complete(self) -> bool:
         return self.result is not None or self.error is not None
 
+    @property
+    def content(self) -> str:
+        if self.error is not None:
+            return json.dumps({"error": self.error}, ensure_ascii=False)
+        elif self.result is not None:
+            return self.result
+        raise ValueError(f"ToolMessage({self.id}, {self.name}) is incomplete, "
+                          "result and error cannot be both None")
+
     def with_result(self, result: str | None, error: str | None) -> ToolMessage:
         return ToolMessage(
             call_id=self.call_id,

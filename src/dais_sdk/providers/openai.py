@@ -155,19 +155,10 @@ class OpenAIProviderMessageParser(BaseMessageParser[
                     ) for tool_call in message.tool_calls]
                     message_param["tool_calls"] = tool_calls
                 return message_param
-            case ToolMessage():
-                if message.result is None and message.error is None:
-                    raise ValueError(f"ToolMessage({message.id}, {message.name}) is incomplete, "
-                                        "result and error cannot be both None")
-                if message.error is not None:
-                    content = json.dumps({"error": message.error}, ensure_ascii=False)
-                else:
-                    assert message.result is not None
-                    content = message.result
-
+            case ToolMessage() as message:
                 return ChatCompletionToolMessageParam(
                     role=message.role,
-                    content=content,
+                    content=message.content,
                     tool_call_id=message.call_id,
                 )
             case _:
@@ -280,7 +271,7 @@ class OpenAIProvider(BaseProvider):
     @override
     async def request_nonstream(self, params: LlmRequestParams):
         parsed = self._param_parser.parse_nonstream(params)
-        response = await self._client.chat.completions.create(
+        response = await self._client.with_options(timeout=params.timeout_sec).chat.completions.create(
             **parsed,
             extra_headers=params.headers,
         )
@@ -290,7 +281,7 @@ class OpenAIProvider(BaseProvider):
     @override
     async def request_stream(self, params: LlmRequestParams) -> StreamMessageGenerator:
         parsed = self._param_parser.parse_stream(params)
-        response = await self._client.chat.completions.create(
+        response = await self._client.with_options(timeout=params.timeout_sec).chat.completions.create(
             **parsed,
             extra_headers=params.headers,
         )

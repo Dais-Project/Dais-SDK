@@ -52,6 +52,8 @@ class FakeClient:
         self.models = FakeModelsAPI(model_ids)
         self.chat = SimpleNamespace(completions=FakeCompletionsAPI(completion_response))
 
+    def with_options(self, **kwargs: Any):
+        return self
 
 class StubParamParser:
     def __init__(self, *, nonstream: dict[str, Any], stream: dict[str, Any]):

@@ -21,6 +21,9 @@ class LLM:
             case LlmProviders.OPENAI:
                 from ..providers.openai import OpenAIProvider
                 return OpenAIProvider(base_url, api_key)
+            case LlmProviders.ANTHROPIC:
+                from ..providers.anthropic import AnthropicProvider
+                return AnthropicProvider(base_url, api_key)
             case _:
                 raise ValueError(f"Unsupported provider type: {provider_type}")
 
@@ -38,8 +41,8 @@ class LLM:
 
     def stream_text_sync(self, params: LlmRequestParams) -> Generator[StreamMessageEvent, None, None]:
         with asyncio.Runner() as runner:
+            gen = self.stream_text(params)
             while True:
-                gen = self.stream_text(params)
                 try:
                     chunk = runner.run(gen.__anext__())
                     yield chunk
