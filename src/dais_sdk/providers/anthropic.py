@@ -199,13 +199,16 @@ class AnthropicProviderParamParser(BaseParamParser[
             result["temperature"] = params.temperature
         if params.max_tokens is not None:
             result["max_tokens"] = params.max_tokens
+        if (tools := self._preparse_tools(params)) is not None:
+            result["tools"] = tools
         if params.tool_choice is not None:
+            if "tools" not in result:
+                # Anthropic SDK requires tools to be set if tool_choice is not "none"
+                params.tool_choice = "none"
             match params.tool_choice:
                 case "auto":     result["tool_choice"] = ToolChoiceAutoParam(type="auto")
                 case "required": result["tool_choice"] = ToolChoiceAnyParam(type="any")
                 case "none":     result["tool_choice"] = ToolChoiceNoneParam(type="none")
-        if (tools := self._preparse_tools(params)) is not None:
-            result["tools"] = tools
         if params.output is not None and params.output != "text":
             if params.output == "json":
                 result["output_config"] = {"format": {

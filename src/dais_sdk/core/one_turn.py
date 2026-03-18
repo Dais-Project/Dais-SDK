@@ -25,6 +25,7 @@ class OneTurn[Input=str, Output: BaseModel=Never]:
             messages=[UserMessage(content=formated_input)],
             instructions=self._instruction,
             output=self._output,
+            tool_choice="none",
         )
 
     def format_input(self, input: Input) -> str:
