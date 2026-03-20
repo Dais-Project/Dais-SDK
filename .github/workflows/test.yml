@@ -1,0 +1,37 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: setup node
+        uses: actions/setup-node@v6
+        with:
+            node-version: lts/*
+            cache: 'pnpm'
+
+      - uses: actions/setup-python@v6
+        with:
+            python-version: 3.14
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+            enable-cache: "auto"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run tests
+        run: |
+          uv run pytest
+          uv run pytest -m integration

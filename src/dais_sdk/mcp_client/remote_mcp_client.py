@@ -1,8 +1,7 @@
+import asyncio
 import httpx
 import webbrowser
-from dataclasses import dataclass
-from contextlib import AsyncExitStack
-from typing import Annotated, Any, NamedTuple, override
+from typing import Any, NamedTuple, override
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
@@ -31,6 +30,11 @@ class OAuthContext(NamedTuple):
     client: httpx.AsyncClient
     server: LocalOAuthServer
 
+    async def aclose(self):
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self.client.aclose())
+            tg.create_task(self.server.stop())
+
 class RemoteMcpClient(McpClient):
     def __init__(self,
                  name: str,
@@ -39,10 +43,14 @@ class RemoteMcpClient(McpClient):
         self._name = name
         self._params = params
         self._session: ClientSession | None = None
-        self._exit_stack: AsyncExitStack | None = None
         self._oauth_context: OAuthContext | None = self._init_oauth()
         if self._params.oauth_params is not None and storage is not None:
             self._params.oauth_params._oauth_token_storage = storage
+
+        self._run_task: asyncio.Task | None = None
+        self._connect_error: BaseException | None = None
+        self._ready_event = asyncio.Event()
+        self._disconnect_event = asyncio.Event()
 
     @property
     @override
@@ -102,27 +110,36 @@ class RemoteMcpClient(McpClient):
             raise ValueError("OAuth context not initialized")
         return await self._oauth_context.server.wait_for_code()
 
-    @override
-    async def connect(self):
-        self._exit_stack = AsyncExitStack()
+    async def _run(self):
+        custum_http_client: httpx.AsyncClient | None = None
         if self._oauth_context:
             http_client = self._oauth_context.client
             await self._oauth_context.server.start()
         else:
-            http_client = await self._exit_stack.enter_async_context(
-                httpx.AsyncClient(headers=self._init_http_headers(), follow_redirects=True))
+            http_client = httpx.AsyncClient(headers=self._init_http_headers(), follow_redirects=True)
+            custum_http_client = http_client
 
         try:
-            read_stream, write_stream, _ = await self._exit_stack.enter_async_context(
-                streamable_http_client(self._params.url, http_client=http_client)
-            )
-            self._session = await self._exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
-            await self._session.initialize()
-        except BaseException:
-            await self.disconnect()
-            raise
+            async with streamable_http_client(self._params.url, http_client=http_client) as (read_stream, write_stream, _):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    self._session = session
+                    self._ready_event.set()
+                    await self._disconnect_event.wait()
+        except BaseException as e:
+            self._connect_error = e
+            self._ready_event.set()
+        finally:
+            self._session = None
+            if custum_http_client:
+                await custum_http_client.aclose()
+
+    @override
+    async def connect(self):
+        self._run_task = asyncio.create_task(self._run())
+        await self._ready_event.wait()
+        if self._connect_error:
+            raise self._connect_error
 
     @override
     async def list_tools(self) -> list[Tool]:
@@ -144,15 +161,17 @@ class RemoteMcpClient(McpClient):
 
     @override
     async def disconnect(self):
-        try:
-            if self._exit_stack:
-                await self._exit_stack.aclose()
-        finally:
-            self._session = None
-            self._exit_stack = None
+        if self._disconnect_event:
+            self._disconnect_event.set()
 
-            if self._oauth_context:
-                try: await self._oauth_context.client.aclose()
-                except Exception: pass
-                try: await self._oauth_context.server.stop()
-                except Exception: pass
+        if self._run_task and not self._run_task.done():
+            try:
+                await self._run_task
+            except Exception:
+                pass
+        self._run_task = None
+
+        if self._oauth_context:
+            try:
+                await self._oauth_context.aclose()
+            except* Exception: pass

@@ -1,4 +1,4 @@
-from contextlib import AsyncExitStack
+import asyncio
 from typing import Any, override
 from mcp import ClientSession, StdioServerParameters as StdioServerParams
 from mcp.client.stdio import stdio_client
@@ -11,7 +11,25 @@ class LocalMcpClient(McpClient):
         self._name: str = name
         self._params: LocalServerParams = params
         self._session: ClientSession | None = None
-        self._exit_stack: AsyncExitStack | None = None
+        self._run_task: asyncio.Task | None = None
+
+        self._connect_error: BaseException | None = None
+        self._ready_event = asyncio.Event()
+        self._disconnect_event = asyncio.Event()
+
+    async def _run(self):
+        try:
+            async with stdio_client(self._params) as (read_stream, write_stream):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    self._session = session
+                    self._ready_event.set()
+                    await self._disconnect_event.wait()
+        except BaseException as e:
+            self._connect_error = e
+            self._ready_event.set()
+        finally:
+            self._session = None
 
     @property
     @override
@@ -20,19 +38,10 @@ class LocalMcpClient(McpClient):
 
     @override
     async def connect(self):
-        self._exit_stack = AsyncExitStack()
-
-        try:
-            read_stream, write_stream = await self._exit_stack.enter_async_context(
-                stdio_client(self._params)
-            )
-            self._session = await self._exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
-            await self._session.initialize()
-        except BaseException:
-            await self.disconnect()
-            raise
+        self._run_task = asyncio.create_task(self._run())
+        await self._ready_event.wait()
+        if self._connect_error:
+            raise self._connect_error
 
     @override
     async def list_tools(self) -> list[Tool]:
@@ -54,7 +63,12 @@ class LocalMcpClient(McpClient):
 
     @override
     async def disconnect(self) -> None:
-        if self._exit_stack:
-            await self._exit_stack.aclose()
-            self._session = None
-            self._exit_stack = None
+        if self._disconnect_event:
+            self._disconnect_event.set()
+
+        if self._run_task and not self._run_task.done():
+            try:
+                await self._run_task
+            except Exception:
+                pass
+        self._run_task = None
