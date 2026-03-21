@@ -226,6 +226,8 @@ def _parse_callable_properties(func: ToolFn) -> tuple[dict[str, dict[str, Any]],
 
         if param.default == inspect.Parameter.empty:
             required.append(param_name)
+        else:
+            properties[param_name]["default"] = param.default
 
     return properties, required
 

@@ -46,6 +46,29 @@ class TestGenerateToolDefinition:
         assert params["properties"]["port"]["type"] == "integer"
         assert params["properties"]["timeout"]["type"] == "number"
 
+    def test_function_with_default_param_values(self):
+
+        def configure(
+            required: str,
+            text: str = "hello",
+            count: int = 3,
+            enabled: bool = False,
+            note: Optional[str] = None,
+        ) -> None:
+            """Configure options"""
+            return None
+
+        result = generate_tool_definition_from_callable(configure)
+        params = result["parameters"]
+        props = params["properties"]
+
+        assert params["required"] == ["required"]
+        assert props["text"]["default"] == "hello"
+        assert props["count"]["default"] == 3
+        assert props["enabled"]["default"] is False
+        assert props["note"]["default"] is None
+        assert "oneOf" in props["note"]
+
     # ------------------------------------------------------------------------
     # 2.2 missing docstring
     # ------------------------------------------------------------------------
