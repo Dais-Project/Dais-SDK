@@ -103,7 +103,7 @@ class RemoteMcpClient(McpClient):
         try:
             webbrowser.open(url)
         except Exception as e:
-            logger.error(f"[OAuth] Not able to open browser", exc_info=e)
+            logger.error("[OAuth] Not able to open browser", exc_info=e)
 
     async def _handle_oauth_callback(self) -> OAuthCode:
         if self._oauth_context is None:
