@@ -203,9 +203,13 @@ class OpenAIProviderParamParser(BaseParamParser[
             max_tokens=params.max_tokens,
             **(params.extra_args or {})
         )
+        if (tools := self._preparse_tools(params)) is not None:
+            result_params["tools"] = cast(list[ChatCompletionFunctionToolParam], tools)
         match params.output:
             case "text":
-                result_params["response_format"] = {"type": "text"}
+                # since text is the default response format,
+                # we don't need to set it explicitly to avoid conflict with tools
+                pass
             case "json":
                 result_params["response_format"] = {"type": "json_object"}
             case model if issubclass(model, BaseModel):
@@ -222,8 +226,6 @@ class OpenAIProviderParamParser(BaseParamParser[
                 }
             case _:
                 raise NotImplementedError(f"Unsupported output format: {params.output}")
-        if (tools := self._preparse_tools(params)) is not None:
-            result_params["tools"] = cast(list[ChatCompletionFunctionToolParam], tools)
         return result_params
 
     @override
