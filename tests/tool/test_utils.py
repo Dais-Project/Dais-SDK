@@ -3,7 +3,7 @@ Test suite for tool utility functions in dais_sdk.tool.utils
 """
 
 import pytest
-from dais_sdk.types.tool import ToolDef
+from dais_sdk.types import ToolDef
 from dais_sdk.tool.utils import find_tool_by_name
 
 # ============================================================================

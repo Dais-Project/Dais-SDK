@@ -100,4 +100,5 @@ __all__ = [
     "RawToolDef",
     "ToolLike",
     "ToolSchema",
+    "ToolFunctionParameterSchema",
 ]

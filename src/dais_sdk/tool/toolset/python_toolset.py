@@ -3,7 +3,7 @@ from typing import Any, Callable, override, overload
 from collections.abc import Mapping
 from pydantic import validate_call, ConfigDict
 from .toolset import Toolset
-from ...types.tool import ToolDef
+from ..types import ToolDef
 
 TOOL_FLAG = "__is_tool__"
 TOOL_DEFAULTS = "__tool_defaults__"

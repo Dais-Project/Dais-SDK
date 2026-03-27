@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...types.tool import ToolDef
+    from ..types import ToolDef
 
 class Toolset(ABC):
     def format_tool_name(self, tool_name: str) -> str:

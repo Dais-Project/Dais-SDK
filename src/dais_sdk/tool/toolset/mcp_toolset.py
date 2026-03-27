@@ -2,10 +2,10 @@ from dataclasses import replace
 from typing import cast, override
 from mcp.types import TextContent, ImageContent, AudioContent, ResourceLink, EmbeddedResource, TextResourceContents, BlobResourceContents
 from .toolset import Toolset
+from ..types import ToolDef, ToolFunctionParameterSchema
 from ...mcp_client.base_mcp_client import McpClient, Tool, ToolResult
 from ...mcp_client.local_mcp_client import LocalMcpClient, LocalServerParams
 from ...mcp_client.remote_mcp_client import RemoteMcpClient, RemoteServerParams, OAuthParams
-from ...types.tool import ToolDef, ToolFunctionParameterSchema
 from ...logger import logger
 
 class McpToolset(Toolset):

@@ -1,5 +1,5 @@
 from dais_sdk.providers.utils import StreamMessageCollector, ToolCallCollector
-from dais_sdk.types.event import TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
+from dais_sdk.types import TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 
 
 def test_tool_call_collector_collect_merges_chunks_by_index() -> None:

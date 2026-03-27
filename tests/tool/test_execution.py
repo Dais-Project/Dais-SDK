@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from dais_sdk.types.tool import ToolDef
+from dais_sdk.types import ToolDef
 from dais_sdk.tool.execute import execute_tool
 
 

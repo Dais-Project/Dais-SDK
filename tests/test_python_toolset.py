@@ -6,10 +6,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from dais_sdk.types.request_params import LlmRequestParams
-from dais_sdk.types.message import UserMessage
-from dais_sdk.types.tool import ToolDef
-from dais_sdk.tool.toolset import python_tool, PythonToolset
+from dais_sdk.types import LlmRequestParams, UserMessage, ToolDef
+from dais_sdk.tool import python_tool, PythonToolset
 from dais_sdk.tool.prepare import prepare_tools, generate_tool_definition_from_callable
 from dais_sdk.tool.execute import execute_tool
 

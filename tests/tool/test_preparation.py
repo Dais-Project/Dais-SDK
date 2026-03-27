@@ -1,4 +1,4 @@
-from dais_sdk.types.tool import ToolDef
+from dais_sdk.types import ToolDef
 from dais_sdk.tool.prepare import prepare_tools
 
 

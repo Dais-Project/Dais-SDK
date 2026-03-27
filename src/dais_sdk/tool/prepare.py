@@ -1,5 +1,5 @@
 """
-source: https://github.com/mozilla-ai/any-llm/blob/main/src/any_llm/tools.py
+Modified from: https://github.com/mozilla-ai/any-llm/blob/main/src/any_llm/tools.py
 """
 
 import dataclasses
@@ -12,7 +12,7 @@ from typing import (Annotated as _Annotated, Literal as _Literal,
                     is_typeddict as _is_typeddict, Any, get_args,
                     get_origin, get_type_hints)
 from pydantic import BaseModel as PydanticBaseModel
-from ..types.tool import ToolFn, ToolDef, RawToolDef, ToolLike, ToolSchema
+from .types import ToolFn, ToolDef, RawToolDef, ToolLike, ToolSchema
 
 def _python_type_to_json_schema(python_type: Any) -> dict[str, Any]:
     """Convert Python type annotation to a JSON Schema for a parameter.

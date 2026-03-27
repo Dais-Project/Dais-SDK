@@ -2,14 +2,14 @@ from typing import cast
 
 import pytest
 
-from dais_sdk.types.event import (
+from dais_sdk.types import (
+    AssistantMessage,
     AssistantMessageEvent,
     StreamMessageEvent,
     TextChunkEvent,
     ToolCallChunkEvent,
     UsageChunkEvent,
 )
-from dais_sdk.types.message import AssistantMessage
 
 
 def test_text_chunk_event_fields() -> None:

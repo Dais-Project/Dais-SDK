@@ -1,5 +1,5 @@
-from typing import assert_never
-from ..types.tool import ToolDef, ToolLike
+from typing import assert_never, cast
+from .types import RawToolDef, ToolDef, ToolLike
 
 def get_tool_name(tool: ToolLike) -> str:
     if callable(tool):
@@ -18,5 +18,5 @@ def find_tool_by_name(tools: list[ToolLike], name: str) -> ToolLike | None:
         elif isinstance(tool, ToolDef) and tool.name == name:
             return tool
         elif isinstance(tool, dict) and tool.get("name") == name:
-            return tool
+            return cast(RawToolDef, tool)
     return None

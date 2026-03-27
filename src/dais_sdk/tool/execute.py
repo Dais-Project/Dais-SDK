@@ -3,7 +3,7 @@ import inspect
 from functools import singledispatch
 from typing import Any, Callable, assert_never, cast
 from types import FunctionType, MethodType
-from ..types.tool import ToolDef, ToolLike
+from .types import ToolDef, ToolLike
 
 
 def _arguments_normalizer(arguments: str | dict) -> dict:
