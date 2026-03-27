@@ -32,6 +32,13 @@ class AttachmentTypeNotSupportedError(LlmProviderException):
         super().__init__(f"Attachment type not supported: ", attachment_type)
         self.attachment_type = attachment_type
 
+class SkillException(Exception): ...
+
+class InvalidSkillArchiveError(SkillException):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
 __all__ = [
     "LlmToolException",
     "ToolDoesNotExistError",
@@ -40,4 +47,7 @@ __all__ = [
 
     "LlmProviderException",
     "AttachmentTypeNotSupportedError",
+    
+    "SkillException",
+    "InvalidSkillArchiveError",
 ]
