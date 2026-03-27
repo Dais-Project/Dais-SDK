@@ -140,7 +140,7 @@ metadata:
 ---
 Main content
 """,
-                "my_skill/readme.txt": "top-level file should be skipped from resources",
+                "my_skill/readme.txt": "top-level file should be included in resources",
                 "my_skill/assets/guide.txt": "hello resource",
                 "my_skill/assets/logo.bin": b"\x00\x01\x02",
             }
@@ -153,12 +153,16 @@ Main content
         assert skill.description == "Skill from zip"
         assert skill.metadata == {"owner": "test"}
 
-        assert len(skill.resources) == 2
+        assert len(skill.resources) == 3
         resources_by_relative = {r.relative: r for r in skill.resources}
-        assert set(resources_by_relative) == {"assets/guide.txt", "assets/logo.bin"}
+        assert set(resources_by_relative) == {"readme.txt", "assets/guide.txt", "assets/logo.bin"}
 
+        readme = resources_by_relative["readme.txt"]
         guide = resources_by_relative["assets/guide.txt"]
         logo = resources_by_relative["assets/logo.bin"]
+
+        assert readme.type == "text"
+        assert readme.content == "top-level file should be included in resources"
 
         assert guide.type == "text"
         assert guide.content == "hello resource"

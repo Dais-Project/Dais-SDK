@@ -106,7 +106,8 @@ class Skill(SkillMd):
         for info in zip_file.infolist():
             if info.is_dir(): continue
             info_path = ZipPath(info.filename)
-            if info_path.parent == skill_root: continue # skip files in skill root, include SKILL.md
+            if info_path == skill_md: continue # skip SKILL.md
+
             relative = info_path.relative_to(skill_root)
             content_bytes = zip_file.read(info.filename)
             resources.append(SkillResource.from_bytes(relative, content_bytes))
