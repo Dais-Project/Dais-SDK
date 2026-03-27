@@ -8,7 +8,8 @@ from pathlib import PurePosixPath
 
 import pytest
 
-from dais_sdk.skill import Skill, SkillMd, SkillParser, SkillResource
+from dais_sdk.skill import Skill, SkillMd, SkillParser
+from dais_sdk.skill.resource import create_from_bytes
 from dais_sdk.types.exceptions import InvalidSkillArchiveError
 
 
@@ -107,19 +108,19 @@ Only body.
 
 class TestSkillResource:
     def test_from_bytes_text(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setattr("dais_sdk.skill.is_binary_string", lambda _: False)
+        monkeypatch.setattr("dais_sdk.skill.resource.is_binary_string", lambda _: False)
 
-        resource = SkillResource.from_bytes(PurePosixPath("docs/readme.txt"), b"\xef\xbb\xbfhello")
+        resource = create_from_bytes("docs/readme.txt", b"\xef\xbb\xbfhello")
 
         assert resource.relative == "docs/readme.txt"
         assert resource.type == "text"
         assert resource.content == "hello"
 
     def test_from_bytes_binary(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setattr("dais_sdk.skill.is_binary_string", lambda _: True)
+        monkeypatch.setattr("dais_sdk.skill.resource.is_binary_string", lambda _: True)
 
         payload = b"\x00\x01\xff\x10"
-        resource = SkillResource.from_bytes(PurePosixPath("assets/logo.bin"), payload)
+        resource = create_from_bytes("assets/logo.bin", payload)
 
         assert resource.relative == "assets/logo.bin"
         assert resource.type == "binary"
@@ -128,7 +129,7 @@ class TestSkillResource:
 
 class TestSkillFromZip:
     def test_from_zip_success_parses_skill_and_resources(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setattr("dais_sdk.skill.is_binary_string", lambda data: b"\x00" in data)
+        monkeypatch.setattr("dais_sdk.skill.resource.is_binary_string", lambda data: b"\x00" in data)
 
         zip_bytes = _make_zip_bytes(
             {

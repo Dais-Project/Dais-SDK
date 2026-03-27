@@ -1,9 +1,9 @@
 import zipfile
 import frontmatter
-from binaryornot.helpers import is_binary_string
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
-from typing import Any, Literal, cast
+from typing import Any, cast
+from .resource import SkillResource, create_from_bytes as create_resource_from_bytes
 from ..types.exceptions import InvalidSkillArchiveError
 
 
@@ -66,23 +66,6 @@ class SkillParser:
         )
 
 @dataclass
-class SkillResource:
-    relative: str
-    type: Literal["text", "binary"]
-    content: str | bytes
-
-    @classmethod
-    def from_bytes(cls, relative: ZipPath, content: bytes) -> SkillResource:
-        is_binary = is_binary_string(content)
-        type = "binary" if is_binary else "text"
-        content_resolved = content if is_binary else content.decode("utf-8-sig", errors="replace")
-        return cls(
-            relative=str(relative),
-            type=type,
-            content=content_resolved,
-        )
-
-@dataclass
 class Skill(SkillMd):
     resources: list[SkillResource] = field(default_factory=list)
 
@@ -110,7 +93,7 @@ class Skill(SkillMd):
 
             relative = info_path.relative_to(skill_root)
             content_bytes = zip_file.read(info.filename)
-            resources.append(SkillResource.from_bytes(relative, content_bytes))
+            resources.append(create_resource_from_bytes(str(relative), content_bytes))
 
         return cls(
             **skill.__dict__,
