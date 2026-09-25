@@ -1,5 +1,5 @@
 import asyncio
-import httpx
+import httpx2
 import webbrowser
 from typing import Any, NamedTuple, override
 from mcp import ClientSession
@@ -27,7 +27,7 @@ class RemoteServerParams(BaseModel):
 # --- --- --- --- --- ---
 
 class OAuthContext(NamedTuple):
-    client: httpx.AsyncClient
+    client: httpx2.AsyncClient
     server: LocalOAuthServer
 
     async def aclose(self):
@@ -98,7 +98,7 @@ class RemoteMcpClient(McpClient):
             redirect_handler=self._handle_redirect,
             callback_handler=self._handle_oauth_callback,
         )
-        client = httpx.AsyncClient(auth=client_provider,
+        client = httpx2.AsyncClient(auth=client_provider,
                                    headers=self._init_http_headers(),
                                    follow_redirects=True)
         return OAuthContext(client, server)
@@ -117,16 +117,16 @@ class RemoteMcpClient(McpClient):
         return await self._oauth_context.server.wait_for_code()
 
     async def _run(self):
-        custum_http_client: httpx.AsyncClient | None = None
+        custum_http_client: httpx2.AsyncClient | None = None
         if self._oauth_context is not None:
             http_client = self._oauth_context.client
             await self._oauth_context.server.start()
         else:
-            http_client = httpx.AsyncClient(headers=self._init_http_headers(), follow_redirects=True)
+            http_client = httpx2.AsyncClient(headers=self._init_http_headers(), follow_redirects=True)
             custum_http_client = http_client
 
         try:
-            async with streamable_http_client(self._params.url, http_client=http_client) as (read_stream, write_stream, _):
+            async with streamable_http_client(self._params.url, http_client=http_client) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
                     init_result = await session.initialize()
                     self._session = session
@@ -165,7 +165,7 @@ class RemoteMcpClient(McpClient):
             raise McpSessionNotEstablishedError()
 
         response = await self._session.call_tool(tool_name, arguments)
-        return ToolResult(response.isError, response.content)
+        return ToolResult(response.is_error, response.content)
 
     @override
     async def disconnect(self):

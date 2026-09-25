@@ -67,7 +67,7 @@ class LocalMcpClient(McpClient):
             raise McpSessionNotEstablishedError()
 
         response = await self._session.call_tool(tool_name, arguments)
-        return ToolResult(response.isError, response.content)
+        return ToolResult(response.is_error, response.content)
 
     @override
     async def disconnect(self) -> None:

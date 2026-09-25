@@ -25,16 +25,16 @@ class McpConnectionErrorCode(StrEnum):
         import asyncio
         import subprocess
         import anyio
-        import httpx
+        import httpx2
         import mcp
         match e:
-            case TimeoutError() | asyncio.TimeoutError() | httpx.ConnectTimeout():
+            case TimeoutError() | asyncio.TimeoutError() | httpx2.ConnectTimeout():
                 return cls.CONNECTION_TIMEOUT
-            case httpx.ConnectError():
+            case httpx2.ConnectError():
                 return cls.CONNECTION_FAILED
-            case httpx.HTTPStatusError() as e if e.response.status_code == 401:
+            case httpx2.HTTPStatusError() as e if e.response.status_code == 401:
                 return cls.AUTH_FAILED
-            case mcp.McpError():
+            case mcp.MCPError():
                 return cls.PROTOCOL_ERROR
             case FileNotFoundError():
                 return cls.COMMAND_NOT_FOUND

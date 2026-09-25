@@ -5,7 +5,7 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Route
 from starlette.requests import Request
-from mcp.client.auth import TokenStorage
+from mcp.client.auth import TokenStorage, AuthorizationCodeResult
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 
 CALLBACK_PAGE = """
@@ -18,7 +18,7 @@ CALLBACK_PAGE = """
 </html>
 """
 
-OAuthCode = tuple[str, str | None]
+OAuthCode = AuthorizationCodeResult
 OAuthCallbackFuture = asyncio.Future[OAuthCode]
 
 class InMemoryTokenStorage(TokenStorage):
@@ -69,12 +69,13 @@ class LocalOAuthServer:
 
         code = params.get("code")
         state = params.get("state")
+        iss = params.get("iss")
 
         if not code:
             return HTMLResponse("<h3>Missing 'code' parameter</h3>", status_code=400)
 
         if not self._future.done():
-            self._future.set_result((code, state))
+            self._future.set_result(AuthorizationCodeResult(code=code, state=state, iss=iss))
 
         return HTMLResponse(CALLBACK_PAGE)
 
