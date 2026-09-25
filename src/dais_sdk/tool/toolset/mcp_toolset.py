@@ -24,7 +24,7 @@ class McpToolset(Toolset):
         tool_def = ToolDef(
             name=mcp_tool.name,
             description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
-            parameters=cast(ToolFunctionParameterSchema, mcp_tool.inputSchema),
+            parameters=cast(ToolFunctionParameterSchema, mcp_tool.input_schema),
             execute=wrapper
         )
         return tool_def
@@ -42,17 +42,17 @@ class McpToolset(Toolset):
                     content_blocks.append(TextBlock(text=block.text))
                 case ImageContent():
                     content_blocks.append(ImageBlock(source=Base64Source(
-                        mime_type=block.mimeType,
+                        mime_type=block.mime_type,
                         data=block.data,
                     )))
                 case AudioContent():
                     content_blocks.append(AudioBlock(source=Base64Source(
-                        mime_type=block.mimeType,
+                        mime_type=block.mime_type,
                         data=block.data,
                     )))
                 case ResourceLink():
                     details = [f"Resource Reference: {block.uri}"]
-                    if block.mimeType: details.append(f"Type: {block.mimeType}")
+                    if block.mime_type: details.append(f"Type: {block.mime_type}")
                     if block.size: details.append(f"Size: {block.size} bytes")
                     if block.description: details.append(f"Description: {block.description}")
                     content_blocks.append(TextBlock(text="\n".join(details)))
@@ -60,7 +60,7 @@ class McpToolset(Toolset):
                     content_blocks.append(TextBlock(text=block.resource.text))
                 case EmbeddedResource() if isinstance(block.resource, BlobResourceContents):
                     resource = block.resource
-                    mime_type = resource.mimeType or "application/octet-stream"
+                    mime_type = resource.mime_type or "application/octet-stream"
                     source = Base64Source(mime_type=mime_type,
                                           data=resource.blob)
                     if mime_type.startswith("image/"): content_blocks.append(ImageBlock(source=source))

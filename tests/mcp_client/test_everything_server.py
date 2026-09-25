@@ -157,7 +157,7 @@ async def _exercise_client(client: McpClient) -> None:
         assert tools, "Expected at least one MCP tool"
         tool = tools[0]
         print(tool)
-        arguments = _build_tool_args(tool.inputSchema)
+        arguments = _build_tool_args(tool.input_schema)
         result = await client.call_tool(tool.name, arguments or None)
         assert result.is_error is False
     finally:

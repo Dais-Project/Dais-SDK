@@ -1,8 +1,8 @@
 import asyncio
 from typing import Any, override
-from mcp import ClientSession, StdioServerParameters as StdioServerParams
-from mcp.client.stdio import stdio_client
-from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
+from mcp import Client, StdioServerParameters as StdioServerParams
+from .base_mcp_client import McpClient, Tool, ToolResult, McpClientNotEstablishedError
+
 
 class LocalServerParams(StdioServerParams): ...
 
@@ -11,7 +11,7 @@ class LocalMcpClient(McpClient):
         self._name: str = name
         self._description: str | None = None
         self._params: LocalServerParams = params
-        self._session: ClientSession | None = None
+        self._client: Client | None = None
         self._run_task: asyncio.Task | None = None
 
         self._connect_error: BaseException | None = None
@@ -20,18 +20,16 @@ class LocalMcpClient(McpClient):
 
     async def _run(self):
         try:
-            async with stdio_client(self._params) as (read_stream, write_stream):
-                async with ClientSession(read_stream, write_stream) as session:
-                    init_result = await session.initialize()
-                    self._session = session
-                    self._description = init_result.instructions
-                    self._ready_event.set()
-                    await self._disconnect_event.wait()
+            async with Client(self._params, mode="auto") as client:
+                self._client = client
+                self._description = client.instructions
+                self._ready_event.set()
+                await self._disconnect_event.wait()
         except BaseException as e:
             self._connect_error = e
             self._ready_event.set()
         finally:
-            self._session = None
+            self._client = None
             self._description = None
 
     @property
@@ -53,21 +51,21 @@ class LocalMcpClient(McpClient):
 
     @override
     async def list_tools(self) -> list[Tool]:
-        if not self._session:
-            raise McpSessionNotEstablishedError()
+        if not self._client:
+            raise McpClientNotEstablishedError()
 
-        result = await self._session.list_tools()
+        result = await self._client.list_tools()
         return result.tools
 
     @override
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> ToolResult:
-        if not self._session:
-            raise McpSessionNotEstablishedError()
+        if not self._client:
+            raise McpClientNotEstablishedError()
 
-        response = await self._session.call_tool(tool_name, arguments)
-        return ToolResult(response.isError, response.content)
+        response = await self._client.call_tool(tool_name, arguments)
+        return ToolResult(response.is_error, response.content)
 
     @override
     async def disconnect(self) -> None:

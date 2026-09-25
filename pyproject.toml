@@ -19,7 +19,8 @@ dependencies = [
     "pydantic>=2.0.0",
     # MCP client dependencies
     "httpx>=0.28.0",
-    "mcp>=1.26.0",
+    "mcp>=2.2.0,<3",
+    "httpx2>=2.5.0",
     "starlette>=0.50.0",
     "uvicorn>=0.40.0",
 ]
