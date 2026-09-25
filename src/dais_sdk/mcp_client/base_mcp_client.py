@@ -3,6 +3,7 @@ from typing import Any, NamedTuple
 from mcp import Tool as McpTool
 from mcp.types import ContentBlock as ToolResultBlock
 
+
 Tool = McpTool
 
 class ToolResult(NamedTuple):
@@ -26,7 +27,7 @@ class McpClient(ABC):
     async def list_tools(self) -> list[Tool]:
         """
         Raises:
-            McpSessionNotEstablishedError: If the session is not established.
+            McpClientNotEstablishedError: If the client is not established.
         """
     @abstractmethod
     async def call_tool(
@@ -34,9 +35,9 @@ class McpClient(ABC):
     ) -> ToolResult:
         """
         Raises:
-            McpSessionNotEstablishedError: If the session is not established.
+            McpClientNotEstablishedError: If the client is not established.
         """
 
-class McpSessionNotEstablishedError(RuntimeError):
+class McpClientNotEstablishedError(RuntimeError):
     def __init__(self):
         super().__init__("MCP Session not established, please call connect() first")

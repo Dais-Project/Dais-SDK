@@ -2,14 +2,16 @@ import asyncio
 import httpx2
 import webbrowser
 from typing import Any, NamedTuple, override
-from mcp import ClientSession
+from mcp import Client
 from mcp.client.auth import OAuthClientProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
+from mcp.client.auth.oauth2 import TokenStorage
 from pydantic import AnyUrl, BaseModel, ConfigDict, PrivateAttr
-from .oauth_server import LocalOAuthServer, OAuthCode, TokenStorage, InMemoryTokenStorage
-from .base_mcp_client import McpClient, Tool, ToolResult, McpSessionNotEstablishedError
+from .oauth_server import LocalOAuthServer, OAuthCode, InMemoryTokenStorage
+from .base_mcp_client import McpClient, Tool, ToolResult, McpClientNotEstablishedError
 from ..logger import logger
+
 
 class OAuthParams(BaseModel):
     oauth_scopes: list[str] | None
@@ -43,7 +45,7 @@ class RemoteMcpClient(McpClient):
         self._name = name
         self._description: str | None = None
         self._params = params
-        self._session: ClientSession | None = None
+        self._client: Client | None = None
         self._oauth_context = self._init_oauth()
         if self._params.oauth_params is not None and storage is not None:
             self._params.oauth_params._oauth_token_storage = storage
@@ -126,18 +128,16 @@ class RemoteMcpClient(McpClient):
             custum_http_client = http_client
 
         try:
-            async with streamable_http_client(self._params.url, http_client=http_client) as (read_stream, write_stream):
-                async with ClientSession(read_stream, write_stream) as session:
-                    init_result = await session.initialize()
-                    self._session = session
-                    self._description = init_result.instructions
-                    self._ready_event.set()
-                    await self._disconnect_event.wait()
+            async with Client(streamable_http_client(self._params.url, http_client=http_client), mode="auto") as client:
+                self._client = client
+                self._description = client.instructions
+                self._ready_event.set()
+                await self._disconnect_event.wait()
         except BaseException as e:
             self._connect_error = e
             self._ready_event.set()
         finally:
-            self._session = None
+            self._client = None
             self._description = None
             if custum_http_client:
                 await custum_http_client.aclose()
@@ -151,20 +151,20 @@ class RemoteMcpClient(McpClient):
 
     @override
     async def list_tools(self) -> list[Tool]:
-        if not self._session:
-            raise McpSessionNotEstablishedError()
+        if not self._client:
+            raise McpClientNotEstablishedError()
 
-        result = await self._session.list_tools()
+        result = await self._client.list_tools()
         return result.tools
 
     @override
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> ToolResult:
-        if not self._session:
-            raise McpSessionNotEstablishedError()
+        if not self._client:
+            raise McpClientNotEstablishedError()
 
-        response = await self._session.call_tool(tool_name, arguments)
+        response = await self._client.call_tool(tool_name, arguments)
         return ToolResult(response.is_error, response.content)
 
     @override
