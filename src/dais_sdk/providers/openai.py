@@ -285,7 +285,6 @@ class OpenAIProviderParamParser(BaseParamParser[
             model=params.model,
             messages=self._preparse_messages(params),
             tool_choice=params.tool_choice,
-            temperature=params.temperature,
             max_tokens=params.max_tokens,
             **(params.extra_args or {})
         )

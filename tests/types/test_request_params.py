@@ -52,7 +52,6 @@ class TestLlmRequestParamsInit:
         assert params.toolsets is None
         assert params.tool_choice == "auto"
         assert params.timeout_sec is None
-        assert params.temperature is None
         assert params.max_tokens is None
         assert params.headers is None
         assert params.extra_args is None
@@ -69,7 +68,6 @@ class TestLlmRequestParamsInit:
             model="gpt-4",
             messages=messages,
             instructions="Follow policy",
-            temperature=0.7,
             max_tokens=1000,
             tool_choice="required",
             headers={"Authorization": "Bearer key"},
@@ -77,7 +75,6 @@ class TestLlmRequestParamsInit:
         )
 
         assert params.instructions == "Follow policy"
-        assert params.temperature == 0.7
         assert params.max_tokens == 1000
         assert params.tool_choice == "required"
         assert params.headers == {"Authorization": "Bearer key"}

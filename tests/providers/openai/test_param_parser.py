@@ -18,7 +18,6 @@ def test_parse_nonstream_maps_core_fields_and_extra_args() -> None:
         model="gpt-4o-mini",
         messages=[ResolvedUserMessage(content="hello")],
         tool_choice="required",
-        temperature=0.3,
         max_tokens=128,
         extra_args={"top_p": 0.9, "presence_penalty": 0.1},
     )
@@ -27,7 +26,6 @@ def test_parse_nonstream_maps_core_fields_and_extra_args() -> None:
 
     assert parsed["model"] == "gpt-4o-mini"
     assert parsed["tool_choice"] == "required"
-    assert parsed["temperature"] == 0.3
     assert parsed["max_tokens"] == 128
     assert parsed["top_p"] == 0.9
     assert parsed["presence_penalty"] == 0.1

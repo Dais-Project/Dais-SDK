@@ -246,8 +246,6 @@ class AnthropicProviderParamParser(BaseParamParser[
         )
         if params.instructions is not None:
             result["system"] = params.instructions
-        if params.temperature is not None:
-            result["temperature"] = params.temperature
         if params.max_tokens is not None:
             result["max_tokens"] = params.max_tokens
         if (tools := self._preparse_tools(params)) is not None:

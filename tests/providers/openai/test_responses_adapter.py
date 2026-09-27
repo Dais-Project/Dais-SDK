@@ -117,7 +117,6 @@ def test_parse_nonstream_maps_core_fields_for_responses_api() -> None:
         instructions="Follow policy",
         messages=[ResolvedUserMessage(content="hello")],
         tool_choice="required",
-        temperature=0.3,
         max_tokens=128,
         extra_args={"top_p": 0.9},
     )
@@ -127,7 +126,6 @@ def test_parse_nonstream_maps_core_fields_for_responses_api() -> None:
     assert parsed["model"] == "gpt-4.1-mini"
     assert parsed["instructions"] == "Follow policy"
     assert parsed["tool_choice"] == "required"
-    assert parsed["temperature"] == 0.3
     assert parsed["max_output_tokens"] == 128
     assert parsed["top_p"] == 0.9
 

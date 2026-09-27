@@ -20,7 +20,6 @@ class LlmRequestParams:
     reasoning: ReasoningEffort | None = None
 
     timeout_sec: float | None = None
-    temperature: float | None = None
     max_tokens: int | None = None
     headers: dict[str, str] | None = None
 

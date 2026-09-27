@@ -337,8 +337,6 @@ class OpenAIResponsesProviderParamParser(BaseParamParser[ResponseCreateParamsNon
                 effort=cast(ReasoningEffort, params.reasoning),
                 summary="auto"
             )
-        if params.temperature is not None:
-            result_params["temperature"] = params.temperature
         if params.max_tokens is not None:
             result_params["max_output_tokens"] = params.max_tokens
         if (tools := self._preparse_tools(params)) is not None:
