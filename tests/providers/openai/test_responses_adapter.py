@@ -2,6 +2,11 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
+from openai.types.responses import (
+    ResponseFunctionCallArgumentsDoneEvent,
+    ResponseFunctionToolCall,
+    ResponseOutputItemAddedEvent,
+)
 from pydantic import BaseModel
 
 from dais_sdk.core.llm import LLM
@@ -13,7 +18,8 @@ from dais_sdk.providers.openai_responses import (
     OpenAIResponsesProviderParamParser,
 )
 from dais_sdk.providers.exception import ContentBlockTypeNotSupportedError
-from dais_sdk.types.event import AssistantMessageEvent, TextChunkEvent, UsageChunkEvent
+from dais_sdk.providers.utils import StreamMessageCollector
+from dais_sdk.types.event import AssistantMessageEvent, TextChunkEvent, ToolCallChunkEvent, UsageChunkEvent
 from dais_sdk.types.message import AssistantMessage, ResolvedToolMessage, ResolvedUserMessage, ToolMessage, UserMessage
 from dais_sdk.types.content_block import AudioBlock, Base64Source, DocumentBlock, ImageBlock, TextBlock, UrlSource
 from dais_sdk.types.request_params import LlmRequestParams
@@ -309,6 +315,33 @@ def test_parse_nonstream_with_pydantic_output_maps_to_text_json_schema() -> None
     assert text_config["format"]["name"] == "AnswerSchema"
     assert text_config["format"]["strict"] is True
     assert text_config["format"]["schema"]["title"] == "AnswerSchema"
+
+
+def test_responses_stream_function_call_name_and_arguments() -> None:
+    parser = OpenAIResponsesProviderMessageParser()
+    collector = StreamMessageCollector()
+    chunks = [
+        ResponseOutputItemAddedEvent(
+            item=ResponseFunctionToolCall(
+                type="function_call", id="item_1", call_id="call_1", name="search",
+                arguments='{"query":"hello"}', status="in_progress"
+            ),
+            output_index=0, sequence_number=0, type="response.output_item.added",
+        ),
+        ResponseFunctionCallArgumentsDoneEvent(
+            arguments='{"query":"hello"}', item_id="item_1", output_index=0, sequence_number=1,
+            type="response.function_call_arguments.done",
+        ),
+    ]
+
+    for chunk in chunks:
+        for event in parser.normalize_chunk(chunk) or []:
+            if isinstance(event, ToolCallChunkEvent):
+                collector.collect(event)
+
+    assert collector.get_message().tool_calls == [
+        AssistantMessage.ToolCall(id="call_1", name="search", arguments={"query": "hello"})
+    ]
 
 
 def test_parse_stream_sets_stream_flag() -> None:

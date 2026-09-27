@@ -26,6 +26,7 @@ from openai.types.responses import (
     ResponseInputItemParam,
     ResponseInputParam,
     ResponseInputTextParam,
+    ResponseOutputItemAddedEvent,
     ResponseOutputMessage,
     ResponseOutputText,
     ResponseReasoningItem,
@@ -148,10 +149,19 @@ class OpenAIResponsesProviderMessageParser(BaseMessageParser[
             case "response.output_text.delta":
                 chunk = cast(ResponseTextDeltaEvent, chunk)
                 result.append(TextChunkEvent(chunk.delta))
+            case "response.output_item.added":
+                chunk = cast(ResponseOutputItemAddedEvent, chunk)
+                if isinstance(chunk.item, ResponseFunctionToolCall):
+                    result.append(ToolCallChunkEvent(
+                        id=chunk.item.call_id,
+                        name=chunk.item.name,
+                        arguments=None,
+                        index=chunk.output_index,
+                    ))
             case "response.function_call_arguments.delta":
                 chunk = cast(ResponseFunctionCallArgumentsDeltaEvent, chunk)
                 result.append(ToolCallChunkEvent(
-                    id=chunk.item_id,
+                    id=None,
                     name=None,
                     arguments=chunk.delta,
                     index=chunk.output_index,
@@ -159,8 +169,8 @@ class OpenAIResponsesProviderMessageParser(BaseMessageParser[
             case "response.function_call_arguments.done":
                 chunk = cast(ResponseFunctionCallArgumentsDoneEvent, chunk)
                 result.append(ToolCallChunkEvent(
-                    id=chunk.item_id,
-                    name=chunk.name,
+                    id=None,
+                    name=None,
                     arguments=chunk.arguments,
                     index=chunk.output_index,
                 ))

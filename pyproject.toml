@@ -14,7 +14,7 @@ requires-python = ">=3.14"
 version = "0.11.4"
 
 dependencies = [
-    "openai>=2.52.0",
+    "openai>=3,<4",
     "anthropic>=1,<2",
     "pydantic>=2.0.0",
     # MCP client dependencies
